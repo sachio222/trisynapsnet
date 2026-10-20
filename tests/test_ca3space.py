@@ -159,6 +159,9 @@ def test_run_load_scores_ca1_when_given_drawings():
     # the stored pattern itself.
     assert s["ca1_final"] == pytest.approx(s["ca1_target"])
     assert s["ca1_cue"] == pytest.approx(s["ca1_target"])
+    # The mean drawing is the best guess with no memory; CA1 from the stored
+    # pattern should beat it after training on 20 drawings.
+    assert s["ca1_target"] < s["ca1_mean"]
 
 
 def test_drawing_patterns_follow_dg():

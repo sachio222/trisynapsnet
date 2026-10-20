@@ -23,7 +23,8 @@ def fake_ca3(path, rule, units, k, exact_by_load, source="random", split=None):
             rows.append({"load": load, "remove": remove, "add": add, "cues": 20,
                          "duplicates": [0, 0], "per_seed": per_seed})
     record = {"source": source, "split": split, "rule": rule, "units": units, "k": k,
-              "seeds": [0, 1], "notes": ["a note"], "rows": rows}
+              "seeds": [0, 1], "notes": ["a note"], "rows": rows,
+              "loads": sorted(exact_by_load), "characters_available": None}
     path.write_text(json.dumps(record))
 
 

@@ -60,7 +60,7 @@ CA1_HIDDEN, CA1_LR, CA1_L2, CA1_STEPS = 100, 0.01, 4e-4, 60
 
 METRICS = ("exact", "overlap_cue", "overlap_final", "stray_cue", "stray_final",
            "ident_cue", "ident_final", "on_stored", "active_final", "iterations", "fixed")
-CA1_METRICS = ("ca1_cue", "ca1_final", "ca1_lookup", "ca1_target")
+CA1_METRICS = ("ca1_cue", "ca1_final", "ca1_lookup", "ca1_target", "ca1_mean")
 
 
 def derive(*parts):
@@ -243,6 +243,8 @@ def run_load(rule, X, seed_parts, images=None, conditions=CONDITIONS, max_cues=M
         scores["ca1_final"] = ca1_error(pm, state, clean)
         scores["ca1_lookup"] = ca1_error(pm, stored[nearest], clean)
         scores["ca1_target"] = ca1_error(pm, stored[targets], clean)
+        # A reference with no memory at all: the mean of the stored drawings.
+        scores["ca1_mean"] = ((images.mean(dim=0, keepdim=True) - clean) ** 2).flatten(1).mean(dim=1)
 
     m = len(target)
     out = []
@@ -341,11 +343,11 @@ def main(argv=None):
         data = encoded_characters(args.split, args.device)
         available = data["vc"].shape[0]
         if any(load > available for load in loads):
-            notes.append("The {} alphabets hold {} characters, so loads above {} use all {}.".format(
+            notes.append("The {} alphabets hold {:,} characters, so loads above {:,} use all {:,}.".format(
                 args.split, available, available, available))
             loads = sorted({min(load, available) for load in loads})
     if args.rule == "pinverse" and any(load >= n for load in loads):
-        notes.append("At loads of {} or more the stored patterns span every direction, so "
+        notes.append("At loads of {:,} or more the stored patterns span every direction, so "
                      "the pseudo-inverse weights are the identity matrix.".format(n))
 
     start = time.time()

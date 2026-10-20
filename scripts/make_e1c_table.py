@@ -102,11 +102,19 @@ def loads_for(ca3, source, units):
     return sorted(loads)
 
 
+def capacity_loads(ca3, source, rule, units):
+    """Loads that count toward capacity. For the pseudo-inverse, loads of n
+    or more are left out: its weights are then the identity matrix and every
+    state is a fixed point, so a clean cue is recalled without completion."""
+    loads = loads_for(ca3, source, units)
+    return [n for n in loads if n < units] if rule == "pinverse" else loads
+
+
 def capacity(ca3, source, rule, units, cond, bar=0.95):
     """The largest load reached with exact recall at or above the bar at
     every smaller tested load, or None."""
     best = None
-    for load in loads_for(ca3, source, units):
+    for load in capacity_loads(ca3, source, rule, units):
         v = cell(ca3, source, rule, units, load, cond, "exact")
         if v is None:
             continue
@@ -149,7 +157,7 @@ def capacity_table(ca3, source):
                     row.append("–")
                     continue
                 c = capacity(ca3, source, r, units, cond)
-                top = max(loads_for(ca3, source, units))
+                top = max(capacity_loads(ca3, source, r, units))
                 if c is None:
                     row.append("below {}".format(loads_for(ca3, source, units)[0]))
                 elif c == top:
@@ -167,7 +175,7 @@ def damage_table(ca3, source, units, rule, loads):
         return []
     conds = sorted({(key[1], key[2]) for key in entry["rows"]}, key=lambda c: (c[1] > 0, c))
     lines = ["| removed | stray added | " + " | ".join(
-        "load {:,}: cue → settled (exact, lookup)".format(n) for n in loads) + " |",
+        "load {:,}: cue → settled (exact, lookup cue, lookup settled)".format(n) for n in loads) + " |",
         "|---|---|" + "---|" * len(loads)]
     for cond in conds:
         row = ["{:.0%}".format(cond[0]), "{:.0%}".format(cond[1])]
@@ -184,7 +192,8 @@ def damage_table(ca3, source, units, rule, loads):
             text = "{} → {}".format(pct(oc, 0), pct(of, 0))
             if cond[1] > 0:
                 text += " [stray {} → {}]".format(pct(sc, 0), pct(sf, 0))
-            text += " ({}, {})".format(pct(ex, 0), pct(lk, 0))
+            lf = cell(ca3, source, rule, units, n, cond, "ident_final")
+            text += " ({}, {}, {})".format(pct(ex, 0), pct(lk, 0), pct(lf, 0))
             row.append(text)
         lines.append("| " + " | ".join(row) + " |")
     return lines
@@ -196,17 +205,18 @@ def ca1_table(ca3, rule, loads, source="drawings_evaluation", units=225):
         return []
     conds = sorted({(key[1], key[2]) for key in entry["rows"]}, key=lambda c: (c[1] > 0, c))
     lines = ["| removed | stray added | " + " | ".join(
-        "load {:,}: cue, settled, lookup, perfect".format(n) for n in loads) + " |",
+        "load {:,}: cue, settled, lookup, perfect, mean drawing".format(n) for n in loads) + " |",
         "|---|---|" + "---|" * len(loads)]
     for cond in conds:
         row = ["{:.0%}".format(cond[0]), "{:.0%}".format(cond[1])]
         for n in loads:
             vals = [cell(ca3, source, rule, units, n, cond, m)
-                    for m in ("ca1_cue", "ca1_final", "ca1_lookup", "ca1_target")]
+                    for m in ("ca1_cue", "ca1_final", "ca1_lookup", "ca1_target", "ca1_mean")]
             if vals[0] is None:
                 row.append("–")
             else:
-                row.append(", ".join("{:.4f}".format(mean(v)) for v in vals))
+                row.append(", ".join("–" if v is None else "{:.4f}".format(mean(v))
+                                     for v in vals))
         lines.append("| " + " | ".join(row) + " |")
     return lines
 
@@ -282,13 +292,24 @@ def seeds_note(ca3, source):
 
 
 def notes(ca3, source):
-    seen = []
-    for (src, _, _), entry in sorted(ca3.items()):
-        if src == source:
-            for note in entry["record"]["notes"]:
-                if note not in seen:
-                    seen.append(note)
-    return seen
+    """Notes on loads the cell count or the alphabets limit, from the records."""
+    out, available = [], None
+    sizes = []
+    for (src, rule, units), entry in sorted(ca3.items(), key=lambda kv: kv[0][2]):
+        if src != source:
+            continue
+        available = available or entry["record"].get("characters_available")
+        if rule == "pinverse" and max(entry["record"]["loads"]) >= units and units not in sizes:
+            sizes.append(units)
+    if available:
+        out.append("The alphabets hold {:,} characters, so the largest load uses all {:,}, one "
+                   "drawing each.".format(available, available))
+    if sizes:
+        out.append("For the pseudo-inverse, loads of n or more (here {}) make its weights the "
+                   "identity matrix: every state is a fixed point, so a clean cue counts as exact "
+                   "recall without any completion. Capacity below leaves those loads out.".format(
+                       ", ".join("{:,} at {:,} cells".format(u, u) for u in sizes)))
+    return out
 
 
 def write_markdown(ca3, e2e, out=RESULTS / "e1c.md"):
@@ -336,8 +357,9 @@ def write_markdown(ca3, e2e, out=RESULTS / "e1c.md"):
             show = [n for n in loads if n in (20, 100, 200, 500, 659, 964, 1000)]
             L += ["## {}, {:,} cells: completion under damage".format(SOURCE_NAMES[source], units),
                   "", "Each cell: overlap of raw cue → overlap of settled state, in percent; for",
-                  "stray-cell damage, stray share of raw cue → settled; then exact recall and the",
-                  "ideal lookup from the raw cue, in percent.", ""]
+                  "stray-cell damage, stray share of raw cue → settled; then exact recall, the",
+                  "ideal lookup from the raw cue and the same lookup from the settled state, in",
+                  "percent.", ""]
             for rule in RULES:
                 rows = damage_table(ca3, source, units, rule, show)
                 if rows:
@@ -349,7 +371,8 @@ def write_markdown(ca3, e2e, out=RESULTS / "e1c.md"):
               "Drawings from the evaluation alphabets, 225 cells. CA1 is trained on the stored",
               "patterns as AHA trains it. Each cell lists CA1 error from the raw cue, from the",
               "settled state, from the pattern the ideal lookup picks, and from the right stored",
-              "pattern itself (the floor). Lower is better.", ""]
+              "pattern itself (the floor), then the error of the mean stored drawing, the best",
+              "guess with no memory at all. Lower is better.", ""]
         for rule in RULES:
             rows = ca1_table(ca3, rule, loads)
             if rows:

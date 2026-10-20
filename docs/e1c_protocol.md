@@ -1,6 +1,6 @@
 # E1c protocol
 
-E1c asks how close CA3 comes to an ideal nearest-memory lookup when it has no list of memories, as the number of stored memories grows and as cues lose more of their cells, and whether the pattern CA3 settles on helps CA1 rebuild the drawing. This file lists every choice E1c makes. The choices went into code and tests before the reported runs and stay fixed.
+E1c asks how close CA3 comes to an ideal nearest-memory lookup when it has no list of memories, as the number of stored memories grows and as cues lose more of their cells, and whether the pattern CA3 settles on helps CA1 rebuild the drawing. This file lists every choice E1c makes. The choices went into code and tests before the reported runs and stay fixed, except two that items 9 and 26 mark as added after a first pass.
 
 ## Terms
 
@@ -32,7 +32,7 @@ E1c asks how close CA3 comes to an ideal nearest-memory lookup when it has no li
 
 7. **Sizes.** n = 225 cells with k = 10 on (AHA's size), 1,000 with 44 on, and 4,000 with 178 on. All three keep AHA's 4.4% of cells on.
 8. **Loads.** 20, 50, 100, 200, 500 and 1,000 at every size.
-9. **Extension.** Random patterns also run at 2,000, 5,000 and 10,000 at 1,000 and 4,000 cells, to find where each rule fails at the larger sizes. Tables label these loads as an extension.
+9. **Added loads.** Random patterns also run at loads near where each rule fails: 150 and 300 at 225 cells; 700, 1,500, 2,000, 5,000 and 10,000 at 1,000 cells; 1,500, 2,000, 3,000, 5,000 and 10,000 at 4,000 cells. They were added after a first pass over the planned loads showed every rule failing between two planned loads, too far apart to compare sizes. Tables label them as added. Drawings use the planned loads only.
 10. **Pseudo-inverse at loads of n or more.** Once the stored patterns span every direction, the pseudo-inverse weight matrix is the identity: every state is a fixed point and CA3 returns the cue unchanged. These loads still run. A clean cue then counts as exact recall without any completion.
 
 ### Cues and damage
@@ -51,26 +51,27 @@ E1c asks how close CA3 comes to an ideal nearest-memory lookup when it has no li
 
 ### Measures, per size, rule, load, condition and seed
 
-19. **Exact recall.** The final state has exactly the right pattern's cells on and no others. No list is consulted.
-20. **Overlap.** Cells on in both the state and the right pattern, over k, for the raw cue and for the final state.
-21. **Stray share.** Cells on outside the right pattern, over k, for the raw cue and for the final state.
-22. **Ideal lookup.** The stored pattern sharing the most active cells with the raw cue. Every stored pattern has k cells on, so this ranks the same as cosine similarity. When several patterns tie, the cue scores 1 over the number tied if the right one is among them, the expected score of a random tie-break. The same lookup also runs on the final state.
-23. **Settled on a stored pattern.** The final state equals some stored pattern, right or wrong.
-24. **Settling steps and fixed points.** For the local rules: the number of steps that changed the state, and whether some step left it unchanged within 70. For the pseudo-inverse: the last step at which any cell changed sign, and whether one more update of every cell at once would flip no sign.
-25. **CA1 error.** Drawings at 225 cells only, at every load. CA1 is trained on the stored patterns as AHA trains it: 100 hidden units, Adam at learning rate 0.01, L2 penalty 4 × 10⁻⁴, 60 full-batch steps, mapping each stored pattern (−1/+1 for the pseudo-inverse, 0/1 for the local rules) to its drawing. Its starting weights depend on load and seed, not on the rule. Error is the mean squared error against the clean drawing, from four inputs: the raw cue in the rule's code, the settled state, the pattern the ideal lookup picks (the first of any tie), and the right stored pattern itself, which gives CA1's floor.
-26. **Seeds.** 10 at 225 and 1,000 cells, 5 at 4,000 cells and for the background check.
+19. **Capacity.** Two summaries per rule and size: the largest load with exact recall at or above 95% at every tested load up to it, and the load where exact recall falls to 50%, interpolated on a log scale between the two tested loads around it. For the pseudo-inverse, loads of n or more are left out.
+20. **Exact recall.** The final state has exactly the right pattern's cells on and no others. No list is consulted.
+21. **Overlap.** Cells on in both the state and the right pattern, over k, for the raw cue and for the final state.
+22. **Stray share.** Cells on outside the right pattern, over k, for the raw cue and for the final state.
+23. **Ideal lookup.** The stored pattern sharing the most active cells with the raw cue. Every stored pattern has k cells on, so this ranks the same as cosine similarity. When several patterns tie, the cue scores 1 over the number tied if the right one is among them, the expected score of a random tie-break. The same lookup also runs on the final state.
+24. **Settled on a stored pattern.** The final state equals some stored pattern, right or wrong.
+25. **Settling steps and fixed points.** For the local rules: the number of steps that changed the state, and whether some step left it unchanged within 70. For the pseudo-inverse: the last step at which any cell changed sign, and whether one more update of every cell at once would flip no sign.
+26. **CA1 error.** Drawings at 225 cells only, at every load. CA1 is trained on the stored patterns as AHA trains it: 100 hidden units, Adam at learning rate 0.01, L2 penalty 4 × 10⁻⁴, 60 full-batch steps, mapping each stored pattern (−1/+1 for the pseudo-inverse, 0/1 for the local rules) to its drawing. Its starting weights depend on load and seed, not on the rule. Error is the mean squared error against the clean drawing, from four inputs: the raw cue in the rule's code, the settled state, the pattern the ideal lookup picks (the first of any tie), and the right stored pattern itself, which gives CA1's floor. A fifth number, added after a first pass showed CA1's floor rising with load, the error of the mean stored drawing, is the best any reconstruction can do with no memory at all.
+27. **Seeds.** 10 at 225 and 1,000 cells, 5 at 4,000 cells and for the background check.
 
 ## Choices for the end-to-end runs
 
-27. **Model.** AHA's settings as in E1b: 225 DG and CA3 cells with 10 on, aha4's vision network, 60 study steps for PR and CA1, normalised minimum-MSE matching, Apple's MPS backend.
-28. **Loads.** 20, 100 and 200 drawings studied at once.
-29. **Runs.** Each seed studies about 400 drawings in runs of N: 20 runs at load 20, 4 at load 100, 2 at load 200. Each run draws N characters without repeats from all 659 evaluation characters, one drawing each, the same drawing per character as in the CA3 harness. Unlike Lake's runs, a run mixes alphabets.
-30. **Test drawings.** The studied drawings again, in a shuffled order, corrupted with E1b's occlusion or noise code at 0, 0.3, 0.5 and 0.7, corruption seed 0, run number seed × 1,000 + run.
-31. **Model seeds.** seed × 1,000 + run, as in E1b. Each run studies once and recalls every level.
-32. **Settling.** The default start, PR's 10 most active cells, as in E1 and E1b.
-33. **No-settling control.** PR's 10 most active cells passed straight on, through the same CA1. For the pseudo-inverse it is the −1/+1 version of those cells, through that rule's CA1.
-34. **Settling from PR as given.** For the local rules only, a third arm settles from the whole PR output with the partial start of choice 15.
-35. **Matching.** Both directions: test-to-study, where each test state picks the nearest studied state, the way a cue retrieves a memory; and study-to-test, AHA's direction.
-36. **CA3 measures.** Exact recall, overlap of PR's 10 most active cells and of the settled state with the right stored pattern, and the ideal lookup, as defined above.
-37. **Recall-loss.** CA1's error against the clean study drawing, with settling and without.
-38. **Seeds.** 5.
+28. **Model.** AHA's settings as in E1b: 225 DG and CA3 cells with 10 on, aha4's vision network, 60 study steps for PR and CA1, normalised minimum-MSE matching, Apple's MPS backend.
+29. **Loads.** 20, 100 and 200 drawings studied at once.
+30. **Runs.** Each seed studies about 400 drawings in runs of N: 20 runs at load 20, 4 at load 100, 2 at load 200. Each run draws N characters without repeats from all 659 evaluation characters, one drawing each, the same drawing per character as in the CA3 harness. Unlike Lake's runs, a run mixes alphabets.
+31. **Test drawings.** The studied drawings again, in a shuffled order, corrupted with E1b's occlusion or noise code at 0, 0.3, 0.5 and 0.7, corruption seed 0, run number seed × 1,000 + run.
+32. **Model seeds.** seed × 1,000 + run, as in E1b. Each run studies once and recalls every level.
+33. **Settling.** The default start, PR's 10 most active cells, as in E1 and E1b.
+34. **No-settling control.** PR's 10 most active cells passed straight on, through the same CA1. For the pseudo-inverse it is the −1/+1 version of those cells, through that rule's CA1.
+35. **Settling from PR as given.** For the local rules only, a third arm settles from the whole PR output with the partial start of choice 15.
+36. **Matching.** Both directions: test-to-study, where each test state picks the nearest studied state, the way a cue retrieves a memory; and study-to-test, AHA's direction.
+37. **CA3 measures.** Exact recall, overlap of PR's 10 most active cells and of the settled state with the right stored pattern, and the ideal lookup, as defined above.
+38. **Recall-loss.** CA1's error against the clean study drawing, with settling and without.
+39. **Seeds.** 5.

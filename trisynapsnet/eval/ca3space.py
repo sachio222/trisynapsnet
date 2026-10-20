@@ -255,17 +255,18 @@ def run_load(rule, X, seed_parts, images=None, conditions=CONDITIONS, max_cues=M
     return out
 
 
-def encoded_characters(split, device="auto", draw_seed=0, checkpoint=None):
+def encoded_characters(split, device="auto", draw_seed=0, checkpoint=None, root=None):
     """One drawing per character of a split and its vision code, cached.
 
     The vision network is frozen, so each split is encoded once and kept
-    in data/cache, which git ignores.
+    in data/cache, which git ignores. root is the Omniglot folder, by
+    default as in omniglot.load_characters.
     """
     path = CACHE / "e1c_vc_{}_draw{}.pt".format(split, draw_seed)
     if path.is_file():
         return torch.load(path)
     from trisynapsnet.utils import resolve_device
-    images, info = omniglot.load_characters(split=split, seed=draw_seed)
+    images, info = omniglot.load_characters(root, split=split, seed=draw_seed)
     dev = resolve_device(device)
     vc = load_vc(checkpoint or omniglot.DEFAULT_CHECKPOINT, device=dev)
     codes = []

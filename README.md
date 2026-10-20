@@ -100,6 +100,59 @@ Two more results stood out:
 
 Every number is in `results/e1b.md`, the item-by-item counts are in `results/e1b_transitions.md`, and the figures are `figures/e1b_<task>_<corruption>.pdf`, with `_tts` for test-to-study matching.
 
+## E1c: recall without a list of memories
+
+E1b found that CA3's settling picks almost exactly the memory a nearest-memory lookup picks. That lookup compares the cue with a list of every stored memory and takes the one sharing the most active cells. For a cue with random damage it is the best decoder possible, so CA3 cannot beat it. The brain keeps no such list. E1c measures how close CA3 comes to that ideal lookup without one, as the number of stored memories (the load) grows and as cues lose more of their cells, and whether the pattern CA3 settles on helps CA1 rebuild the drawing.
+
+The main test runs CA3 on its own, without the vision network or PR. CA3 stores N patterns, receives damaged copies of them as cues, and settles. The patterns are random, with exactly k of n cells on, or DG's patterns for one drawing each of N different Omniglot characters. Damage removes a share of a pattern's active cells, adds stray cells, or both. So that CA3 can start from a pattern with fewer than k cells, the local rules gained an option to begin settling from the cue as given. The default still begins from the cue's k most active cells, and E1b's stored scores repeat exactly with it. CA3 runs at 225, 1,000 and 4,000 cells with 4.4% on. A second test runs the full model: it studies 20, 100 or 200 drawings at once and recalls each from an occluded or noisy copy. Every choice is in `docs/e1c_protocol.md`.
+
+The predictions, written before the runs:
+
+1. At low load CA3 recalls exactly and matches the ideal lookup. Exact recall falls as load grows. The pseudo-inverse rule holds until the load nears the number of cells, then fails. The covariance rule holds longer than clipped binary synapses.
+2. Larger networks hold proportionally more memories.
+3. From partial cues, settling raises overlap with the right memory and lowers CA1's reconstruction error, with gains growing as more cells are removed, until load makes recall fail.
+4. End to end, the gain from settling appears only where PR's output is partial or noisy.
+
+### E1c results
+
+**Exact recall** means CA3's final state is exactly the right stored pattern, with no list consulted. With random patterns at 225 cells, in percent, 10 seeds:
+
+| Load | Pseudo-inverse, clean cue | Pseudo-inverse, 40% of cells removed | Covariance, clean | Covariance, 40% removed | Clipped binary, clean | Clipped binary, 40% removed | Ideal lookup, 40% removed |
+|---|---|---|---|---|---|---|---|
+| 20 | 100 | 98.0 | 100 | 100 | 100 | 100 | 100 |
+| 100 | 100 | 66.6 | 99.2 | 95.1 | 99.9 | 99.0 | 100 |
+| 150 | 100 | 0.2 | 92.1 | 74.3 | 97.9 | 85.7 | 100 |
+| 200 | 100 | 0.0 | 74.8 | 40.8 | 91.2 | 41.4 | 100 |
+| 300 | 100 | 0.0 | 31.4 | 6.2 | 42.2 | 0.3 | 100 |
+
+The load at which exact recall from clean cues falls to 50%, read between tested loads on a log scale:
+
+| Patterns | Cells | Covariance | Clipped binary | Pseudo-inverse, 40% removed |
+|---|---|---|---|---|
+| Random | 225 | 252 | 281 | 111 |
+| Random | 1,000 | 795 | 777 | 327 |
+| Random | 4,000 | 2,386 | 1,222 | 1,539 |
+| Drawings | 225 | 180 | 264 | 110 |
+| Drawings | 1,000 | 323 | 542 | 307 |
+| Drawings | 4,000 | 346 | above 659 | above 659 |
+
+The evaluation alphabets hold 659 characters, so drawings stop at that load.
+
+- **Prediction 1 held for the local rules and partly failed for the pseudo-inverse rule.** At 20 memories, both local rules recall exactly from every damage tested, at every size, and score the same as the ideal lookup, even with 80% of the cells removed. The pseudo-inverse rule loses cues with 60% or more of their cells removed at every load: its state falls toward all cells off, with 11% exact recall at 60% removed and 0% at 80% for 20 drawings at 225 cells. With 40% removed it fails at a third to a half of the cell count, well before the load nears it. Clean cues stay exact up to the cell count only because every stored pattern is a fixed point of its weights. Clipped binary synapses held more memories than the covariance rule on drawings at every size and on random patterns at 225 cells. The covariance rule held more on random patterns at 4,000 cells.
+- **Prediction 2 failed.** Larger networks hold more memories but fewer per cell. For the covariance rule on random patterns, the 50% load per cell falls from 1.12 to 0.79 to 0.60 across the three sizes, and for clipped binary synapses from 1.25 to 0.78 to 0.31.
+- **Prediction 3 held for the local rules.** With 20 drawings stored, settling restores 99% to 100% of the pattern from cues missing up to 80% of their cells. CA1's error falls from 0.0157 to 0.0046 with 40% of cells removed and from 0.0344 to 0.0046 with 80% removed, so the gain grows with damage. At 200 drawings, past capacity, settling adds little overlap or loses some. For the pseudo-inverse rule the gain holds up to 40% removed and reverses beyond it.
+- **Prediction 4 failed.** End to end, no settling rule beat passing PR's 10 most active cells straight on by more than 0.7 points at any load or corruption. Where PR's output was partial, settling did not complete it: at 20 drawings and occlusion 0.7, PR's top cells hold 53.5% of the right pattern and the settled state 54.6%. At 200 drawings CA3 is past its capacity for drawings, and the local rules lose up to 35 points, and 23 points even on clean drawings.
+
+These results also stood out:
+
+- **CA1 limits reconstruction above about 50 drawings.** AHA trains CA1 for 60 steps. CA1's error when given the exact stored pattern rises from 0.0046 at 20 drawings to 0.0226 at 50 and 0.0363 at 100. Predicting the mean stored drawing for every item, with no memory at all, scores about 0.044.
+- **DG's drawing patterns are harder to store than random ones.** DG uses some cells much more often than others: the spread in how often each cell fires is about 2.5 times that of random patterns. The covariance rule suffers most, holding 346 drawings at 4,000 cells against 2,386 random patterns.
+- **The pseudo-inverse rule at 4,000 cells stops short of a few cues.** Each of its 70 steps updates 356 random cells of 4,000, so any one cell goes unvisited with probability 0.15%. A cue needing about 71 cells switched back on then keeps at least one unchanged in about 10% of cases. That matches the 11% to 16% of cues with 40% removed that end one cell short at every load up to 1,000.
+
+The ideal lookup identifies the right memory for almost every damaged cue tested, at every load. Below capacity, CA3 matches it without a list, and the pattern it fills in helps CA1, when CA3 receives a damaged copy of a stored pattern directly. In the full model, PR's output for a damaged drawing mixes missing cells with wrong ones, and settling added nothing at any load tested.
+
+Every number is in `results/e1c.md`, and the figures are `figures/e1c_*.pdf`.
+
 ## Install
 
 Clone this repo next to aha4, so that `../aha4/checkpoints/vc_pretrained.pth.tar` and `../aha4/data` exist. aha4's `evaluate.py` downloads the data on its first run.
@@ -151,6 +204,27 @@ PYTHON=.venv/bin/python scripts/run_e1b.sh
 PYTHON=.venv/bin/python scripts/e1b_transitions.py
 ```
 
+## Run E1c
+
+CA3 on its own, one rule and size, every load and damage:
+
+```
+python -m trisynapsnet.eval.ca3space --source random --units 1000 --rule covariance --seeds 10
+python -m trisynapsnet.eval.ca3space --source drawings --split evaluation --units 225 --rule willshaw
+```
+
+The first drawings run encodes one drawing of every character once and keeps the codes in `data/cache`. The full model at a higher load:
+
+```
+python -m trisynapsnet.eval.endtoend --load 100 --kind occlusion --seeds 5
+```
+
+The whole experiment, then `results/e1c.md` and the figures:
+
+```
+PYTHON=.venv/bin/python scripts/run_e1c.sh
+```
+
 ## Layout
 
 ```
@@ -160,8 +234,10 @@ trisynapsnet/data/omniglot.py   Lake's runs, the validation runs and the instanc
 trisynapsnet/data/corrupt.py    occlusion and noise for test drawings
 trisynapsnet/eval/oneshot.py    one-shot scoring and diagnostics
 trisynapsnet/eval/evaluate.py   command line for one setting
-scripts/                        E1 and E1b drivers, table and figure builders
-docs/                           E1b's protocol
+trisynapsnet/eval/ca3space.py   E1c: CA3 on its own, cued with damaged patterns
+trisynapsnet/eval/endtoend.py   E1c: the full model studying many drawings at once
+scripts/                        E1, E1b and E1c drivers, table and figure builders
+docs/                           E1b's and E1c's protocols
 ```
 
 Code adapted from aha4 says so at the top of each file.

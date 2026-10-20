@@ -136,6 +136,16 @@ def build_config(args):
                      ca3_iters=args.ca3_iters, ca3_update=update)
 
 
+def recorded_args(args):
+    """The arguments as the result file records them, with every path
+    made portable (see omniglot.portable)."""
+    recorded = dict(vars(args))
+    for key in ("checkpoint", "data_dir", "eval_data_dir", "out"):
+        if recorded.get(key) is not None:
+            recorded[key] = omniglot.portable(recorded[key])
+    return recorded
+
+
 def default_out(args):
     """E1's name for a clean classification run, E1b's name otherwise."""
     kind, _ = corruption_levels(args)
@@ -221,7 +231,7 @@ def main(argv=None):
     out = Path(args.out) if args.out else default_out(args)
     out.parent.mkdir(parents=True, exist_ok=True)
     record = {
-        "args": vars(args),
+        "args": recorded_args(args),
         "config": asdict(config),
         "coding_level": config.dg_k / config.dg_units,
         "device": str(device),
@@ -239,7 +249,7 @@ def main(argv=None):
     elif args.runs == "background":
         record["validation_runs"] = [run["info"] for run in runs]
     out.write_text(json.dumps(record, indent=2))
-    print("Wrote {}".format(out))
+    print("Wrote {}".format(omniglot.portable(out)))
 
 
 if __name__ == "__main__":

@@ -44,6 +44,6 @@ def test_markdown_has_the_headline_sections_and_no_absolute_paths(tmp_path):
     out = table.write_markdown(table.load_ca3(tmp_path), {}, tmp_path / "e1c.md")
     text = out.read_text()
     assert "## Random patterns: exact recall against load" in text
-    assert "2,000 (extension)" in text
+    assert "2,000 (added)" in text
     assert "| 225, 10 | 20 | – | 100.0 |" in text
     assert "/Users/" not in text and str(tmp_path) not in text

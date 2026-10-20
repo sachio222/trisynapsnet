@@ -41,7 +41,10 @@ MARKERS = {"pinverse": "o", "covariance": "s", "willshaw": "^", "none": "D", "lo
 LOAD_SHADES = ("#9ec5f0", "#5a9be3", "#2a78d6", "#1a4f91", "#0c2a52", "#000000")
 REMOVALS = (0.0, 0.2, 0.4, 0.6, 0.8)
 CLEAN, HALF = (0.0, 0.0), (0.4, 0.0)
-STANDARD_MAX = 1000     # loads above this are the random-pattern extension
+# The planned loads. Random patterns also run at added loads near where
+# each rule fails; drawings cap at the characters available.
+STANDARD = (20, 50, 100, 200, 500, 1000)
+STANDARD_MAX = 1000
 
 
 def load_ca3(results_dir=RESULTS):
@@ -132,7 +135,7 @@ def exact_table(ca3, source):
         "|---|---|" + "---|" * 7]
     for units, k in SIZES:
         for load in loads_for(ca3, source, units):
-            tag = " (extension)" if load > STANDARD_MAX else ""
+            tag = "" if load in STANDARD or source != "random" else " (added)"
             row = ["{:,}, {}".format(units, k), "{:,}{}".format(load, tag)]
             row += [pct(cell(ca3, source, r, units, load, CLEAN, "exact")) for r in RULES]
             row += [pct(cell(ca3, source, r, units, load, HALF, "exact")) for r in RULES]
@@ -140,6 +143,51 @@ def exact_table(ca3, source):
             lookups = [v for v in lookups if v is not None]
             row.append(pct(lookups[0]) if lookups else "–")
             lines.append("| " + " | ".join(row) + " |")
+    return lines
+
+
+def half_load(ca3, source, rule, units, cond):
+    """Load at which exact recall first falls through 50%, interpolated on a
+    log scale between the two tested loads around it. Returns None when
+    recall never falls below 50%, and 0 when it starts below."""
+    import math
+    prev = None
+    for load in capacity_loads(ca3, source, rule, units):
+        v = cell(ca3, source, rule, units, load, cond, "exact")
+        if v is None:
+            continue
+        m = mean(v)
+        if m < 0.5:
+            if prev is None:
+                return 0
+            (l0, m0) = prev
+            t = (m0 - 0.5) / (m0 - m)
+            return math.exp(math.log(l0) + t * (math.log(load) - math.log(l0)))
+        prev = (load, m)
+    return None
+
+
+def half_table(ca3, source):
+    lines = ["| cells, on | " + " | ".join(
+        "{} clean | {} 40% removed".format(LABELS[r], LABELS[r]) for r in RULES) + " |",
+        "|---|" + "---|" * 6]
+    for units, k in SIZES:
+        if not loads_for(ca3, source, units):
+            continue
+        row = ["{:,}, {}".format(units, k)]
+        for r in RULES:
+            for cond in (CLEAN, HALF):
+                if (source, r, units) not in ca3:
+                    row.append("–")
+                    continue
+                h = half_load(ca3, source, r, units, cond)
+                if h is None:
+                    row.append("above {:,}".format(max(capacity_loads(ca3, source, r, units))))
+                elif h == 0:
+                    row.append("below {:,}".format(loads_for(ca3, source, units)[0]))
+                else:
+                    row.append("{:,.0f} ({:.2f} per cell)".format(h, h / units))
+        lines.append("| " + " | ".join(row) + " |")
     return lines
 
 
@@ -348,6 +396,9 @@ def write_markdown(ca3, e2e, out=RESULTS / "e1c.md"):
         L += ["", "Largest load at which exact recall stays at or above 95% at every tested",
               "load up to it, and that load per cell:", ""]
         L += capacity_table(ca3, source) + [""]
+        L += ["Load at which exact recall falls to 50%, interpolated on a log scale between",
+              "the two tested loads around it, and that load per cell:", ""]
+        L += half_table(ca3, source) + [""]
 
     for source in ("random", "drawings_evaluation"):
         for units, _ in SIZES:
@@ -462,10 +513,15 @@ def plot_exact(ca3, out):
                       MARKERS["lookup"], ":")
                 ax.axvline(units, color="#b5b5b0", lw=0.8)
             ax.set_xscale("log")
+            if loads:
+                from matplotlib.ticker import NullLocator
+                ax.set_xticks(loads)
+                ax.set_xticklabels(["{:,}".format(n) for n in loads], rotation=45, fontsize=7)
+                ax.xaxis.set_minor_locator(NullLocator())
             ax.set_ylim(-2, 102)
             ax.set_title("{}, {:,} cells, {} on".format(SOURCE_NAMES[source], units, k),
                          fontsize=9, loc="left")
-            ax.set_xlabel("Stored patterns (load); grey line: load = cells", fontsize=8)
+            ax.set_xlabel("Stored patterns (load); grey line: load = cells, where the pseudo-inverse weights become the identity", fontsize=7)
             ax.set_ylabel("Exact recall (%)", fontsize=8)
             _style(ax)
     axes[0][0].legend(fontsize=6.5, frameon=False, loc="lower left")

@@ -25,9 +25,15 @@ mkdir -p results/logs
 
 RULES="pinverse covariance willshaw"
 LOADS="20 50 100 200 500 1000"
-# Random patterns only: higher loads at the larger sizes, to find where
-# each rule fails there. Labelled as an extension in the table.
-EXTRA_LOADS="2000 5000 10000"
+# Random patterns only: added loads near where each rule fails at each
+# size, and higher loads at the larger sizes. Labelled as added in the table.
+extra_loads() {
+    case $1 in
+        225) echo "150 300";;
+        1000) echo "700 1500 2000 5000 10000";;
+        4000) echo "1500 2000 3000 5000 10000";;
+    esac
+}
 
 seeds_for() { if [ "$1" = "4000" ]; then echo 5; else echo 10; fi; }
 k_for() { case $1 in 225) echo 10;; 1000) echo 44;; 4000) echo 178;; esac; }
@@ -54,11 +60,7 @@ if [ "$PHASE" = "A" ] || [ "$PHASE" = "all" ]; then
     for units in 225 1000 4000; do
         for rule in $RULES; do
             # shellcheck disable=SC2086
-            if [ "$units" = "225" ]; then
-                ca3 random evaluation "$units" "$rule" "$(seeds_for "$units")" $LOADS
-            else
-                ca3 random evaluation "$units" "$rule" "$(seeds_for "$units")" $LOADS $EXTRA_LOADS
-            fi
+            ca3 random evaluation "$units" "$rule" "$(seeds_for "$units")" $LOADS $(extra_loads "$units")
         done
     done
     for units in 225 1000; do

@@ -1,7 +1,7 @@
 # Adapted from github.com/sachio222/aha4 (MIT), model/modules.py at 446d6db.
 # The vision network, DG, PR, CA1 and the bipolar CA3 rules are unchanged.
-# New here: k-winners-take-all and the local CA3 rules, covariance and
-# Willshaw.
+# New here: k-winners-take-all, the local CA3 rules, covariance and
+# Willshaw, and settling from a partial cue (E1c).
 """The brain-region parts of the model.
 
 The layout starts from AHA, the Artificial Hippocampal Algorithm of
@@ -38,6 +38,11 @@ BIPOLAR_RULES = ("pinverse", "hebbian")
 # cells it connects. Both store 0/1 patterns and settle with k-WTA.
 LOCAL_RULES = ("covariance", "willshaw")
 CA3_RULES = BIPOLAR_RULES + LOCAL_RULES
+# Where local-rule settling begins. "kwta" starts from the cue's k most
+# active cells, as in E1 and E1b. "cue" starts from the cue as given, so a
+# partial pattern with fewer than k active cells, or one with stray cells,
+# reaches the recurrent weights unchanged (added for E1c).
+CA3_STARTS = ("kwta", "cue")
 
 
 def get_top_k(x, k=10, mask_type="pass_through", topk_dim=0, scatter_dim=0):
@@ -375,10 +380,17 @@ class CA3():
     cells are on or off, and recall keeps the k most driven cells at each
     step (see kwta). The cue is the PR(EC-CA3) output, and it can keep
     driving CA3 during recall with strength cue_weight, the way EC input to
-    CA3 may persist while the network settles.
+    CA3 may persist while the network settles. With start="kwta" (the
+    default) settling begins from the cue's k most active cells. With
+    start="cue" it begins from the cue as given, so the first update is
+    kWTA(cue W + cue_weight cue). Bipolar rules always begin from the cue
+    itself and ignore start.
     """
 
-    def __init__(self, dim1, gain=2.7, n_update=20, n_iter=70, k=10, cue_weight=0.0):
+    def __init__(self, dim1, gain=2.7, n_update=20, n_iter=70, k=10, cue_weight=0.0,
+                 start="kwta"):
+        if start not in CA3_STARTS:
+            raise ValueError("start must be one of {}".format(", ".join(CA3_STARTS)))
         self._train_method = {
             "hebbian": self._hebbian,
             "pinverse": self._pinverse,
@@ -387,7 +399,7 @@ class CA3():
         }
         self.dim1 = dim1
         self.gain, self.n_update, self.n_iter = gain, n_update, n_iter
-        self.k, self.cue_weight = k, cue_weight
+        self.k, self.cue_weight, self.start = k, cue_weight, start
         self.rule = None
         self.W = torch.zeros(dim1, dim1)
 
@@ -409,7 +421,21 @@ class CA3():
             return self._settle_sparse(Y)
         return self._settle_bipolar(Y, generator)
 
-    def _settle_bipolar(self, Y, generator=None):
+    def settle(self, Y, generator=None):
+        """Like update(), and also reports how each cue settled.
+
+        Returns (states, info). info["iterations"] counts, for each cue, the
+        steps that changed its state; for the bipolar rules it is the last
+        step at which any cell changed sign. info["fixed"] is True where the
+        final state is a fixed point: for the local rules, a step left it
+        unchanged; for the bipolar rules, one more update of every cell at
+        once would flip no sign. The states are exactly update()'s.
+        """
+        if self.rule in LOCAL_RULES:
+            return self._settle_sparse(Y, track=True)
+        return self._settle_bipolar(Y, generator, track=True)
+
+    def _settle_bipolar(self, Y, generator=None, track=False):
         """Asynchronous tanh updates, as in AHA.
 
         Each step picks n_update neurons at random and sets each one from the
@@ -419,29 +445,48 @@ class CA3():
         """
         state = Y.clone()
         n = state.shape[1]
-        for _ in range(self.n_iter):
+        last = torch.zeros(state.shape[0], dtype=torch.long)
+        for t in range(self.n_iter):
             idx = torch.randperm(n, generator=generator)[:self.n_update].to(state.device)
-            state[:, idx] = torch.tanh(self.gain * (state @ self.W[:, idx]))
-        return state
+            new = torch.tanh(self.gain * (state @ self.W[:, idx]))
+            if track:
+                flipped = ((new > 0) != (state[:, idx] > 0)).any(dim=1).cpu()
+                last[flipped] = t + 1
+            state[:, idx] = new
+        if not track:
+            return state
+        after = torch.tanh(self.gain * (state @ self.W))
+        fixed = ((after > 0) == (state > 0)).all(dim=1).cpu()
+        return state, {"iterations": last, "fixed": fixed}
 
-    def _settle_sparse(self, cue):
+    def _settle_sparse(self, cue, track=False):
         """Synchronous k-WTA updates for the local rules.
 
-        The first state is the k most active cells of the cue. Each step,
-        every cell sums its recurrent input from the cells now on, plus
-        cue_weight times its cue, and the k most driven cells fire next. I
-        stop early once the state stops changing, or after n_iter steps.
+        The first state is the k most active cells of the cue, or with
+        start="cue" the cue itself. Each step, every cell sums its recurrent
+        input from the cells now on, plus cue_weight times its cue, and the
+        k most driven cells fire next. I stop early once the state stops
+        changing, or after n_iter steps.
 
         Args:
-            cue: (tensor) PR(EC-CA3) output in [0, 1], shape (batch, cells).
+            cue: (tensor) PR(EC-CA3) output in [0, 1], or a 0/1 pattern,
+                shape (batch, cells).
         """
-        state = kwta(cue, self.k)
+        state = cue.clone() if self.start == "cue" else kwta(cue, self.k)
+        steps = torch.zeros(cue.shape[0], dtype=torch.long)
+        fixed = torch.zeros(cue.shape[0], dtype=torch.bool)
         for _ in range(self.n_iter):
             new = kwta(state @ self.W + self.cue_weight * cue, self.k)
+            if track:
+                same = (new == state).all(dim=1).cpu()
+                fixed |= same
+                steps += (~same).long()
             if torch.equal(new, state):
                 break
             state = new
-        return state
+        if not track:
+            return state
+        return state, {"iterations": steps, "fixed": fixed}
 
     def energy(self, state):
         """Hopfield energy of each state in a batch, -1/2 s W s^T.

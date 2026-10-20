@@ -1,6 +1,6 @@
 # Adapted from github.com/sachio222/aha4 (MIT), model/aha.py at 446d6db.
-# New here: routing for the local CA3 rules, the cue weight, and the
-# self-recall and DG overlap diagnostics.
+# New here: routing for the local CA3 rules, the cue weight, the CA3 start
+# option, and the self-recall and DG overlap diagnostics.
 """The full model: a frozen vision network feeding a resettable hippocampus.
 
 The wiring follows AHA (Kowadlo, Ahmed and Rawlinson 2019, Figure 4). One
@@ -39,6 +39,7 @@ class AHAConfig:
     ca3_update: int = 20        # neurons updated per step, bipolar rules
     ca3_iters: int = 70         # settling steps (the most for local rules)
     ca3_cue_weight: float = 0.0  # how strongly the cue keeps driving CA3, local rules
+    ca3_start: str = "kwta"     # local rules: start from the cue's top k, or the cue itself
 
     pr_hidden: int = 1000
     pr_lr: float = 0.01
@@ -117,7 +118,8 @@ class AHA():
         self.dg = modules.DG(self.in_dim, cfg.dg_units, cfg.dg_k,
                              cfg.dg_gamma, cfg.dg_knockout).to(self.device)
         self.ca3 = modules.CA3(cfg.dg_units, cfg.ca3_gain, cfg.ca3_update, cfg.ca3_iters,
-                               k=cfg.dg_k, cue_weight=cfg.ca3_cue_weight)
+                               k=cfg.dg_k, cue_weight=cfg.ca3_cue_weight,
+                               start=cfg.ca3_start)
         self.pr = modules.ECToCA3(self.in_dim, cfg.dg_units, cfg.pr_hidden).to(self.device)
         self.pm = modules.CA1(cfg.dg_units, cfg.image_size**2, cfg.pm_hidden,
                               cfg.image_size).to(self.device)

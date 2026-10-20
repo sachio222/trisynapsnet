@@ -42,6 +42,24 @@ E1 keeps CA3's dense weight matrix and uses k-winners-take-all, both labelled st
 
 Settings are chosen on 20 validation runs built from Omniglot's 30 background alphabets the same way as Lake's runs, so Lake's runs are scored only once at the end.
 
+### E1 results
+
+A local rule recovers CA3 from the collapse, but recurrent settling still costs accuracy. On Lake's 20 runs, 10 seeds, with normalised matching:
+
+| CA3 | Cells, active | CA3 accuracy |
+|---|---|---|
+| Pseudo-inverse, AHA's rule | 225, 10 | 61.5% |
+| Bipolar Hebbian, AHA's option | 225, 10 | 5.8% |
+| Covariance | 225, 10 | 53.8% |
+| Covariance | 1,000, 44 | 54.8% |
+| Clipped binary synapses | 225, 10 | 54.2% |
+| Clipped binary synapses | 1,000, 44 | 54.7% |
+| No settling: the 10 most active PR cells | 225, 10 | 64.3% |
+
+Cued with a studied drawing, CA3 with either local rule settles on exactly that drawing's stored pattern every time. With bipolar Hebbian it never does. So the collapse came from storing sparse patterns as -1/+1. Locality alone did not cause it.
+
+The local rules still score about 7 points below the pseudo-inverse rule. Passing on the 10 most active PR cells without any settling scores 64.3%, above every rule that settles, so CA3's settling pulls some new drawings into the wrong memory. Letting the PR cue keep driving CA3 while it settles closes the gap: on the validation runs, CA3 accuracy rose from 61.4% to 67.8% when the cue counted as much as the recurrent input (cue weight 1), against 65.2% for the pseudo-inverse rule. Larger DG and CA3 moved CA3 accuracy by about a point. Every number is in `results/bio_e1.md`.
+
 ## Install
 
 Clone this repo next to aha4, so that `../aha4/checkpoints/vc_pretrained.pth.tar` and `../aha4/data` exist. aha4's `evaluate.py` downloads the data on its first run.

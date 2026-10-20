@@ -10,10 +10,10 @@ with k-winners-take-all (k-WTA), a stand-in for feedback inhibition.
 import pytest
 import torch
 
-from fh.data import omniglot
-from fh.eval import evaluate, oneshot
-from fh.model import modules
-from fh.model.aha import AHA, AHAConfig
+from trisynapsnet.data import omniglot
+from trisynapsnet.eval import evaluate, oneshot
+from trisynapsnet.model import modules
+from trisynapsnet.model.aha import AHA, AHAConfig
 
 N, K, P = 225, 10, 20
 

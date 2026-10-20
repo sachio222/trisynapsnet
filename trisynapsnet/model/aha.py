@@ -20,7 +20,7 @@ from dataclasses import dataclass
 import torch
 import torch.nn.functional as F
 
-from fh.model import modules
+from trisynapsnet.model import modules
 
 
 @dataclass

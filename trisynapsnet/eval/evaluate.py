@@ -24,15 +24,15 @@ among the same 20. --runs official builds these runs from the evaluation
 alphabets, --runs background from the background alphabets.
 
 --occlusion and --noise corrupt the test drawings, never the study
-drawings, at one or more levels (see fh/data/corrupt.py). Each (seed, run)
+drawings, at one or more levels (see trisynapsnet/data/corrupt.py). Each (seed, run)
 studies once and recalls every level, so one call covers a whole sweep.
 
 Seeds set the hippocampal parts only. The vision network comes from the
 checkpoint, so the vc and pixels scores are the same on every seed.
 
 Example:
-    python -m fh.eval.evaluate --runs background --ca3-rule covariance --seeds 5 --normalise
-    python -m fh.eval.evaluate --task instance --noise 0 0.3 0.6 --normalise
+    python -m trisynapsnet.eval.evaluate --runs background --ca3-rule covariance --seeds 5 --normalise
+    python -m trisynapsnet.eval.evaluate --task instance --noise 0 0.3 0.6 --normalise
 """
 
 import argparse
@@ -44,11 +44,11 @@ from pathlib import Path
 
 import torch
 
-from fh.data import corrupt, omniglot
-from fh.eval import oneshot
-from fh.model import modules
-from fh.model.aha import AHA, AHAConfig, load_vc
-from fh.utils import resolve_device, set_seed
+from trisynapsnet.data import corrupt, omniglot
+from trisynapsnet.eval import oneshot
+from trisynapsnet.model import modules
+from trisynapsnet.model.aha import AHA, AHAConfig, load_vc
+from trisynapsnet.utils import resolve_device, set_seed
 
 REPO = Path(__file__).resolve().parents[2]
 

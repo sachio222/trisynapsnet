@@ -1,4 +1,4 @@
-"""Tests for the parts copied from aha4 into fh/model/modules.py.
+"""Tests for the parts copied from aha4 into trisynapsnet/model/modules.py.
 
 They are the aha4 tests that cover code this project kept, so a change here
 can't quietly break what aha4 fixed.
@@ -8,7 +8,7 @@ import pytest
 import torch
 import torch.nn.functional as F
 
-from fh.model import modules
+from trisynapsnet.model import modules
 
 DEVICES = ["cpu"]
 if torch.backends.mps.is_available():
@@ -116,7 +116,7 @@ def _stroke_images(n=20, size=52):
     """Line drawings with plenty of blank page, made like the real inputs."""
     from torchvision.transforms.functional import resize
 
-    from fh.data.omniglot import centre_of_mass
+    from trisynapsnet.data.omniglot import centre_of_mass
 
     torch.manual_seed(0)
     big = torch.zeros(n, 1, 105, 105)

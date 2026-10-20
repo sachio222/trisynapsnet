@@ -12,7 +12,7 @@ import math
 import pytest
 import torch
 
-from fh.data import corrupt
+from trisynapsnet.data import corrupt
 
 SIZE = 52
 

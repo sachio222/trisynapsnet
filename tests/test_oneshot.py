@@ -3,8 +3,8 @@
 import pytest
 import torch
 
-from fh.data import omniglot
-from fh.eval import oneshot
+from trisynapsnet.data import omniglot
+from trisynapsnet.eval import oneshot
 
 
 def test_min_mse_match_picks_the_nearest_study_item():

@@ -1,6 +1,8 @@
-# faithful-hippocampus
+# TrisynapsNet
 
-Jacob Krajewski, 2026. Working name.
+Jacob Krajewski, 2026.
+
+TrisynapsNet is named for the hippocampus's trisynaptic circuit, the loop from entorhinal cortex through the dentate gyrus and CA3 to CA1 that this model rebuilds.
 
 This project builds an algorithm that learns from one example, using only circuitry and learning rules that have a counterpart in the brain. It starts from the layout of AHA and replaces one part at a time.
 
@@ -14,7 +16,7 @@ Every part names its brain region and cell type. Every connection and learning r
 - Connections are sparse, at the density measured for that pathway.
 - Each synapse has its own weight. No weights are shared between positions.
 - Firing rates are never negative.
-- Cell counts keep the ratios measured in the rat.
+- Cell counts keep the ratios measured in humans, scaled down, and use rodent values only where no human measurement exists.
 - Learning rules are local: a synapse changes using only the activity of the two cells it connects, plus a signal the brain broadcasts widely, such as dopamine.
 
 ## AHA's parts
@@ -103,6 +105,12 @@ Every number is in `results/e1b.md`, the item-by-item counts are in `results/e1b
 Clone this repo next to aha4, so that `../aha4/checkpoints/vc_pretrained.pth.tar` and `../aha4/data` exist. aha4's `evaluate.py` downloads the data on its first run.
 
 ```
+git clone https://github.com/sachio222/aha4
+git clone https://github.com/sachio222/trisynapsnet
+cd trisynapsnet
+```
+
+```
 python -m venv .venv
 .venv/bin/pip install -r requirements.txt
 .venv/bin/python -m pytest
@@ -115,7 +123,7 @@ Pass `--checkpoint` and `--data-dir` to point somewhere else. E1b's instance run
 One setting:
 
 ```
-python -m fh.eval.evaluate --runs background --ca3-rule covariance --seeds 5 --normalise
+python -m trisynapsnet.eval.evaluate --runs background --ca3-rule covariance --seeds 5 --normalise
 ```
 
 The whole experiment, then the table in `results/bio_e1.md`:
@@ -131,7 +139,7 @@ Each result is a JSON file in `results/` with every setting, per-seed scores and
 One sweep, the instance task under noise at four levels:
 
 ```
-python -m fh.eval.evaluate --task instance --noise 0 0.3 0.6 0.9 --ca3-rule covariance --normalise
+python -m trisynapsnet.eval.evaluate --task instance --noise 0 0.3 0.6 0.9 --ca3-rule covariance --normalise
 ```
 
 Each (seed, run) studies once and recalls every level. `--corruption-seed` fixes every circle and noisy pixel. The output JSON holds accuracy and recall-loss for each level.
@@ -146,14 +154,14 @@ PYTHON=.venv/bin/python scripts/e1b_transitions.py
 ## Layout
 
 ```
-fh/model/modules.py   brain-region parts, including the CA3 rules
-fh/model/aha.py       the parts wired together
-fh/data/omniglot.py   Lake's runs, the validation runs and the instance runs
-fh/data/corrupt.py    occlusion and noise for test drawings
-fh/eval/oneshot.py    one-shot scoring and diagnostics
-fh/eval/evaluate.py   command line for one setting
-scripts/              E1 and E1b drivers, table and figure builders
-docs/                 E1b's protocol
+trisynapsnet/model/modules.py   brain-region parts, including the CA3 rules
+trisynapsnet/model/aha.py       the parts wired together
+trisynapsnet/data/omniglot.py   Lake's runs, the validation runs and the instance runs
+trisynapsnet/data/corrupt.py    occlusion and noise for test drawings
+trisynapsnet/eval/oneshot.py    one-shot scoring and diagnostics
+trisynapsnet/eval/evaluate.py   command line for one setting
+scripts/                        E1 and E1b drivers, table and figure builders
+docs/                           E1b's protocol
 ```
 
 Code adapted from aha4 says so at the top of each file.

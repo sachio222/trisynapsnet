@@ -45,7 +45,7 @@ run() {
     fi
     echo "run ${name} ($(date +%H:%M:%S))"
     # shellcheck disable=SC2086
-    "$PY" -m fh.eval.evaluate --normalise --task "$task" --runs "$runs" --seeds "$seeds" \
+    "$PY" -m trisynapsnet.eval.evaluate --normalise --task "$task" --runs "$runs" --seeds "$seeds" \
         --ca3-rule "$rule" --ca3-iters "$iters" --"$kind" $LEVELS --match "$match" \
         --out "results/${name}.json" > "results/logs/${name}.log" 2>&1
     grep -E "^Took" "results/logs/${name}.log"

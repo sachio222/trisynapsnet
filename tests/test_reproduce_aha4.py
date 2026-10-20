@@ -9,9 +9,9 @@ import os
 import pytest
 import torch
 
-from fh.data import omniglot
-from fh.eval import oneshot
-from fh.model.aha import AHA, AHAConfig, load_vc
+from trisynapsnet.data import omniglot
+from trisynapsnet.eval import oneshot
+from trisynapsnet.model.aha import AHA, AHAConfig, load_vc
 
 # aha4 results/cpu_seed0.json: Lake's 20 runs, seed 0, CPU, study-to-test,
 # raw-scale matching, pseudo-inverse CA3 at 225 cells with 10 on.
@@ -22,8 +22,8 @@ have_aha4 = omniglot.DEFAULT_CHECKPOINT.is_file() and \
 
 
 @pytest.mark.skipif(not have_aha4, reason="aha4 checkpoint or runs not found")
-@pytest.mark.skipif(os.environ.get("FH_SLOW") != "1",
-                    reason="takes a minute or two on the CPU; set FH_SLOW=1")
+@pytest.mark.skipif(os.environ.get("TSN_SLOW") != "1",
+                    reason="takes a minute or two on the CPU; set TSN_SLOW=1")
 def test_pinverse_reproduces_aha4_on_lakes_runs():
     runs = omniglot.load_runs()
     vc = load_vc(omniglot.DEFAULT_CHECKPOINT, device="cpu")

@@ -11,10 +11,10 @@ import pytest
 import torch
 from PIL import Image
 
-from fh.data import corrupt, omniglot
-from fh.eval import evaluate, oneshot
-from fh.model import modules
-from fh.model.aha import AHA, AHAConfig
+from trisynapsnet.data import corrupt, omniglot
+from trisynapsnet.eval import evaluate, oneshot
+from trisynapsnet.model import modules
+from trisynapsnet.model.aha import AHA, AHAConfig
 
 
 def fake_alphabets(root, split="evaluation", alphabets=2, characters=15):

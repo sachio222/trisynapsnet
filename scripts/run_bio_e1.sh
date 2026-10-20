@@ -28,7 +28,7 @@ run() {
         return
     fi
     echo "run ${name}"
-    "$PY" -m fh.eval.evaluate --normalise --runs "$runs" --seeds "$seeds" \
+    "$PY" -m trisynapsnet.eval.evaluate --normalise --runs "$runs" --seeds "$seeds" \
         --ca3-rule "$rule" --dg-units "$units" --dg-k "$k" --ca3-cue-weight "$cw" \
         --ca3-iters "$iters" --out "results/${name}.json" > "results/logs/${name}.log" 2>&1
     tail -n 9 "results/logs/${name}.log"

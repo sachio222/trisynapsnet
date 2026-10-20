@@ -28,10 +28,10 @@ from pathlib import Path
 
 import torch
 
-from fh.data import corrupt, omniglot
-from fh.eval import oneshot
-from fh.model.aha import AHA, AHAConfig, load_vc
-from fh.utils import resolve_device
+from trisynapsnet.data import corrupt, omniglot
+from trisynapsnet.eval import oneshot
+from trisynapsnet.model.aha import AHA, AHAConfig, load_vc
+from trisynapsnet.utils import resolve_device
 
 ROOT = Path(__file__).resolve().parents[1]
 COLUMNS = ("settling right", "no settling right", "only settling right",

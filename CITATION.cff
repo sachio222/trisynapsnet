@@ -1,0 +1,17 @@
+cff-version: 1.2.0
+message: "If you use this code, please cite it as below."
+title: "TrisynapsNet: a hippocampal network built from circuitry and learning rules the brain has"
+authors:
+  - family-names: Krajewski
+    given-names: Jacob
+version: 0.1.0
+date-released: 2026-10-20
+license: MIT
+repository-code: "https://github.com/sachio222/trisynapsnet"
+keywords:
+  - hippocampus
+  - one-shot learning
+  - computational neuroscience
+  - CA3
+  - Omniglot
+  - local learning rules

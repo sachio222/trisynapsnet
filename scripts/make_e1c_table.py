@@ -86,13 +86,13 @@ def cell(ca3, source, rule, units, load, cond, metric):
 
 def pct(values, digits=1):
     if values is None:
-        return "–"
+        return "n/a"
     return "{:.{d}f}".format(100 * mean(values), d=digits)
 
 
 def pct_sd(values):
     if values is None:
-        return "–"
+        return "n/a"
     return "{:.1f} ± {:.1f}".format(100 * mean(values), 100 * sd(values))
 
 
@@ -141,7 +141,7 @@ def exact_table(ca3, source):
             row += [pct(cell(ca3, source, r, units, load, HALF, "exact")) for r in RULES]
             lookups = [cell(ca3, source, r, units, load, HALF, "ident_cue") for r in RULES]
             lookups = [v for v in lookups if v is not None]
-            row.append(pct(lookups[0]) if lookups else "–")
+            row.append(pct(lookups[0]) if lookups else "n/a")
             lines.append("| " + " | ".join(row) + " |")
     return lines
 
@@ -178,7 +178,7 @@ def half_table(ca3, source):
         for r in RULES:
             for cond in (CLEAN, HALF):
                 if (source, r, units) not in ca3:
-                    row.append("–")
+                    row.append("n/a")
                     continue
                 h = half_load(ca3, source, r, units, cond)
                 if h is None:
@@ -202,7 +202,7 @@ def capacity_table(ca3, source):
         for r in RULES:
             for cond in (CLEAN, HALF):
                 if (source, r, units) not in ca3:
-                    row.append("–")
+                    row.append("n/a")
                     continue
                 c = capacity(ca3, source, r, units, cond)
                 top = max(capacity_loads(ca3, source, r, units))
@@ -233,7 +233,7 @@ def damage_table(ca3, source, units, rule, loads):
             ex = cell(ca3, source, rule, units, n, cond, "exact")
             lk = cell(ca3, source, rule, units, n, cond, "ident_cue")
             if oc is None:
-                row.append("–")
+                row.append("n/a")
                 continue
             sc = cell(ca3, source, rule, units, n, cond, "stray_cue")
             sf = cell(ca3, source, rule, units, n, cond, "stray_final")
@@ -261,9 +261,9 @@ def ca1_table(ca3, rule, loads, source="drawings_evaluation", units=225):
             vals = [cell(ca3, source, rule, units, n, cond, m)
                     for m in ("ca1_cue", "ca1_final", "ca1_lookup", "ca1_target", "ca1_mean")]
             if vals[0] is None:
-                row.append("–")
+                row.append("n/a")
             else:
-                row.append(", ".join("–" if v is None else "{:.4f}".format(mean(v))
+                row.append(", ".join("n/a" if v is None else "{:.4f}".format(mean(v))
                                      for v in vals))
         lines.append("| " + " | ".join(row) + " |")
     return lines
@@ -285,7 +285,7 @@ def e2e_table(e2e, kind, direction):
             for r in RULES:
                 rec = recs[r]
                 if rec is None:
-                    row += ["–", "–"]
+                    row += ["n/a", "n/a"]
                     continue
                 p = rec["levels"][j]["per_seed"]
                 gap = [a - b for a, b in zip(p["pc " + direction], p["pc_none " + direction])]
@@ -314,7 +314,7 @@ def e2e_ca3_table(e2e, kind):
             for r in RULES:
                 rec = recs[r]
                 if rec is None:
-                    row.append("–")
+                    row.append("n/a")
                     continue
                 p = rec["levels"][j]["per_seed"]
                 row.append("{}, {}".format(pct(p["overlap_final"]), pct(p["exact"])))
@@ -322,7 +322,7 @@ def e2e_ca3_table(e2e, kind):
             row.append("{:.4f}".format(mean(ps["recall_loss_none"])))
             for r in RULES:
                 rec = recs[r]
-                row.append("–" if rec is None else
+                row.append("n/a" if rec is None else
                            "{:.4f}".format(mean(rec["levels"][j]["per_seed"]["recall_loss"])))
             lines.append("| " + " | ".join(row) + " |")
     return lines

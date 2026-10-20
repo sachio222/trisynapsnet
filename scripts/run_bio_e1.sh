@@ -59,6 +59,7 @@ run background 5 "$best" "$units" "$k" 0 0
 # paper's size and at its best Phase A size.
 run official 10 pinverse 225 10 0
 run official 10 hebbian 225 10 0
+run official 10 covariance 225 10 0 0
 for rule in covariance willshaw; do
     run official 10 "$rule" 225 10 0
     read -r units k <<< "$("$PY" scripts/make_e1_table.py --best-size "$rule")"

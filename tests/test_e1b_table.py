@@ -12,7 +12,8 @@ table = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(table)
 
 
-def fake_result(path, rule, iters, kind, pc_by_level, task="instance", runs="official"):
+def fake_result(path, rule, iters, kind, pc_by_level, task="instance", runs="official",
+                match="study-to-test"):
     """A results file shaped like evaluate.py's, with two seeds."""
     levels = []
     for level, pcs in pc_by_level.items():
@@ -24,7 +25,7 @@ def fake_result(path, rule, iters, kind, pc_by_level, task="instance", runs="off
             "recall_loss": {"mean": 0.01, "std": 0.0},
             "per_seed": {"level": level, "accuracy": acc, "recall_loss": [0.01, 0.01]},
         })
-    record = {"args": {"task": task, "runs": runs, "seeds": 2},
+    record = {"args": {"task": task, "runs": runs, "seeds": 2, "match": match},
               "config": {"ca3_rule": rule, "ca3_iters": iters}, "levels": levels}
     path.write_text(json.dumps(record))
 
@@ -48,3 +49,14 @@ def test_settling_gap_is_paired_by_seed(tmp_path):
     assert gaps[0]["mean"] == pytest.approx(-0.05)
     assert gaps[1]["mean"] == pytest.approx(0.15)
     assert gaps[1]["wins"] == 2 and gaps[0]["wins"] == 0
+
+
+def test_matching_directions_stay_apart(tmp_path):
+    fake_result(tmp_path / "e1b_none.json", "covariance", 0, "noise", {0.0: [0.5, 0.5]})
+    fake_result(tmp_path / "e1b_none_tts.json", "covariance", 0, "noise", {0.0: [0.9, 0.9]},
+                match="test-to-study")
+    rows = table.load(tmp_path)
+    sts = table.find(rows, "instance", "official", "noise", "none")
+    tts = table.find(rows, "instance", "official", "noise", "none", match="test-to-study")
+    assert sts["levels"][0.0]["summary"]["pc"]["mean"] == 0.5
+    assert tts["levels"][0.0]["summary"]["pc"]["mean"] == 0.9

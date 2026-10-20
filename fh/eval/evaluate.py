@@ -73,7 +73,7 @@ def parse_args(argv=None):
     p.add_argument("--normalise-input", action="store_true",
                    help="L2-normalise the VC output before it feeds DG and PR")
     p.add_argument("--out", default=None,
-                   help="output JSON; by default results/bio_e1_<runs>_<rule>_<units>_<k>[_cw<w>].json")
+                   help="output JSON; by default results/bio_e1_<runs>_<rule>_<units>_<k>[_cw<w>][_it<n>].json")
     return p.parse_args(argv)
 
 
@@ -97,6 +97,8 @@ def default_out(args):
     name = "bio_e1_{}_{}_{}_{}".format(args.runs, args.ca3_rule, args.dg_units, args.dg_k)
     if args.ca3_cue_weight:
         name += "_cw{:g}".format(args.ca3_cue_weight)
+    if args.ca3_iters != 70:
+        name += "_it{}".format(args.ca3_iters)
     return REPO / "results" / (name + ".json")
 
 

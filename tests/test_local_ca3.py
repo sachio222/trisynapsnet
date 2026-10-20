@@ -110,6 +110,13 @@ def test_cue_weight_holds_recall_near_a_strong_cue():
     assert torch.equal(ca3.update(cue), modules.kwta(cue, K))
 
 
+def test_zero_settling_steps_pass_on_the_cue_winners():
+    X, cue = sparse_patterns_and_shifted_cues()
+    ca3 = modules.CA3(N, k=K, n_iter=0)
+    ca3.train(X, method="willshaw")
+    assert torch.equal(ca3.update(cue), modules.kwta(cue, K))
+
+
 def _random_images(seed):
     g = torch.Generator().manual_seed(seed)
     return (torch.rand(20, 1, 52, 52, generator=g) > 0.9).float()
@@ -215,4 +222,5 @@ def test_evaluate_accepts_the_new_options():
     # Bipolar rules update 20 of 225 neurons a step. Bigger nets update the
     # same share, so each settles over the same number of sweeps.
     assert config.ca3_update == round(20 * 1000 / 225)
+    assert evaluate.default_out(args).name == "bio_e1_background_willshaw_1000_44_cw0.5_it30.json"
     assert evaluate.build_config(evaluate.parse_args([])).ca3_update == 20

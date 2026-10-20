@@ -30,6 +30,7 @@ def load(results_dir=RESULTS):
         rows.append({
             "file": path.name, "runs": r["args"]["runs"], "rule": c["ca3_rule"],
             "units": c["dg_units"], "k": c["dg_k"], "cue_weight": c["ca3_cue_weight"],
+            "iters": c["ca3_iters"],
             "seeds": r["args"]["seeds"], "summary": r["summary"],
             "diagnostics": r["diagnostics"], "seconds": r["seconds"],
         })
@@ -37,7 +38,8 @@ def load(results_dir=RESULTS):
     def order(row):
         size = (row["units"], row["k"])
         return (row["runs"] != "background", RULE_ORDER.index(row["rule"]),
-                SIZE_ORDER.index(size) if size in SIZE_ORDER else 99, row["cue_weight"])
+                SIZE_ORDER.index(size) if size in SIZE_ORDER else 99, row["cue_weight"],
+                -row["iters"])
     return sorted(rows, key=order)
 
 
@@ -49,13 +51,13 @@ def best_local(rows):
     """The local rule and size with the highest CA3 accuracy on validation
     runs, cue weight 0. Ties go to the smaller network."""
     pool = [r for r in rows if r["runs"] == "background" and r["rule"] in LOCAL_RULES
-            and r["cue_weight"] == 0]
+            and r["cue_weight"] == 0 and r["iters"] == 70]
     return max(pool, key=lambda r: (pc(r), -r["units"]))
 
 
 def best_size(rows, rule):
     pool = [r for r in rows if r["runs"] == "background" and r["rule"] == rule
-            and r["cue_weight"] == 0]
+            and r["cue_weight"] == 0 and r["iters"] == 70]
     return max(pool, key=lambda r: (pc(r), -r["units"]))
 
 
@@ -65,15 +67,15 @@ def acc(row, stage):
 
 
 def table(rows):
-    lines = ["| runs | rule | units | k | coding level | cue weight | VC | PR | PC | PM "
+    lines = ["| runs | rule | units | k | coding level | cue weight | CA3 steps | VC | PR | PC | PM "
              "| self-recall exact (overlap) | DG overlap same / diff | seconds |",
-             "|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
+             "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
     for r in rows:
         d = r["diagnostics"]
-        lines.append("| {} | {} | {} | {} | {:.1%} | {:g} | {} | {} | {} | {} | {:.1%} ({:.2f}) "
-                     "| {:.2f} / {:.2f} | {:.0f} |".format(
+        lines.append("| {} | {} | {} | {} | {:.1%} | {:g} | {} | {} | {} | {} | {} "
+                     "| {:.1%} ({:.2f}) | {:.2f} / {:.2f} | {:.0f} |".format(
                          r["runs"], r["rule"], r["units"], r["k"], r["k"] / r["units"],
-                         r["cue_weight"], acc(r, "vc"), acc(r, "pr"), acc(r, "pc"), acc(r, "pm"),
+                         r["cue_weight"], r["iters"], acc(r, "vc"), acc(r, "pr"), acc(r, "pc"), acc(r, "pm"),
                          d["self_recall_exact"]["mean"], d["self_recall_overlap"]["mean"],
                          d["dg_same"]["mean"], d["dg_diff"]["mean"], r["seconds"]))
     return "\n".join(lines)
@@ -88,7 +90,9 @@ def build(rows):
              "of study drawings whose own PR output settles CA3 on exactly the stored "
              "pattern, with the mean share of stored cells recovered in brackets. DG overlap "
              "is shared active DG cells over k, without refractory inhibition, for a study "
-             "and test drawing of the same character and of different characters.", ""]
+             "and test drawing of the same character and of different characters. CA3 steps is the most settling steps allowed; local rules stop "
+             "early once the state stops changing, and 0 means CA3 passes on the k most active "
+             "cells of the PR output.", ""]
     if background:
         parts += ["## Phase A: validation runs from the background alphabets, {} seeds".format(
             background[0]["seeds"]), "", table(background), ""]

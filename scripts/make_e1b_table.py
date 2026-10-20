@@ -152,6 +152,12 @@ reconstruction and the clean study drawing it should be.
 Settling gap tables give CA3 accuracy with settling minus no settling, in
 points, paired by seed, with the number of seeds where settling scored
 higher in brackets.
+
+Matching runs study-to-test, the paper's direction, unless a section says
+test-to-study. Study-to-test has each study drawing pick the nearest of the
+20 test states. Test-to-study has each test state pick the nearest of the
+20 studied states, the way a cued memory retrieves. Item-by-item counts for
+the local rules are in `results/e1b_transitions.md`.
 """
 
 SECTIONS = (

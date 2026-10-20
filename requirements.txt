@@ -1,0 +1,8 @@
+# Versions this project was tested with (Python 3.12, macOS on Apple Silicon).
+# On Linux with an NVIDIA GPU, install torch from pytorch.org for your CUDA
+# version first, then the rest of this file.
+torch==2.14.0
+torchvision==0.29.0
+numpy==2.5.3
+pillow==12.3.0
+pytest==9.1.1

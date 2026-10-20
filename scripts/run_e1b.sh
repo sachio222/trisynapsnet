@@ -15,8 +15,11 @@
 # check before the evaluation alphabets. No setting is chosen from it.
 # Phase B: the headline. Instance runs from the evaluation alphabets and
 # Lake's 20 runs, 10 seeds.
+# Phase C: Phase B again, matching test-to-study: each test drawing's state
+# is matched to the nearest studied state, as a cued memory would be. Files
+# end in _tts.
 #
-# Usage: scripts/run_e1b.sh [A|B|all]   (PYTHON=/path/to/python to pick one)
+# Usage: scripts/run_e1b.sh [A|B|C|all]   (PYTHON=/path/to/python to pick one)
 # A result file that already exists is kept, so the script can resume.
 # Logs go to results/logs/.
 
@@ -30,11 +33,12 @@ LEVELS="0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 0.98"
 OPTIONS="pinverse:70 covariance:70 willshaw:70 covariance:0"
 
 run() {
-    # run <task> <runs> <seeds> <rule> <settling steps> <corruption>
-    local task=$1 runs=$2 seeds=$3 rule=$4 iters=$5 kind=$6
+    # run <task> <runs> <seeds> <rule> <settling steps> <corruption> [match]
+    local task=$1 runs=$2 seeds=$3 rule=$4 iters=$5 kind=$6 match=${7:-study-to-test}
     local name="e1b_${task}_${runs}_${rule}_225_10"
     if [ "$iters" != "70" ]; then name="${name}_it${iters}"; fi
     name="${name}_${kind}"
+    if [ "$match" = "test-to-study" ]; then name="${name}_tts"; fi
     if [ -f "results/${name}.json" ]; then
         echo "keep results/${name}.json"
         return
@@ -42,16 +46,16 @@ run() {
     echo "run ${name} ($(date +%H:%M:%S))"
     # shellcheck disable=SC2086
     "$PY" -m fh.eval.evaluate --normalise --task "$task" --runs "$runs" --seeds "$seeds" \
-        --ca3-rule "$rule" --ca3-iters "$iters" --"$kind" $LEVELS \
+        --ca3-rule "$rule" --ca3-iters "$iters" --"$kind" $LEVELS --match "$match" \
         --out "results/${name}.json" > "results/logs/${name}.log" 2>&1
     grep -E "^Took" "results/logs/${name}.log"
 }
 
 sweep() {
-    # sweep <task> <runs> <seeds>
+    # sweep <task> <runs> <seeds> [match]
     for kind in occlusion noise; do
         for option in $OPTIONS; do
-            run "$1" "$2" "$3" "${option%:*}" "${option#*:}" "$kind"
+            run "$1" "$2" "$3" "${option%:*}" "${option#*:}" "$kind" "${4:-study-to-test}"
         done
     done
 }
@@ -62,6 +66,10 @@ fi
 if [ "$PHASE" = "B" ] || [ "$PHASE" = "all" ]; then
     sweep instance official 10
     sweep classification official 10
+fi
+if [ "$PHASE" = "C" ] || [ "$PHASE" = "all" ]; then
+    sweep instance official 10 test-to-study
+    sweep classification official 10 test-to-study
 fi
 
 "$PY" scripts/make_e1b_table.py > /dev/null

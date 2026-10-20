@@ -58,7 +58,7 @@ A local rule recovers CA3 from the collapse, but recurrent settling still costs 
 
 Cued with a studied drawing, CA3 with either local rule settles on exactly that drawing's stored pattern every time. With bipolar Hebbian it never does. So the collapse came from storing sparse patterns as -1/+1. Locality alone did not cause it.
 
-The local rules still score about 7 points below the pseudo-inverse rule. Passing on the 10 most active PR cells without any settling scores 64.3%, above every rule that settles, so CA3's settling pulls some new drawings into the wrong memory. Letting the PR cue keep driving CA3 while it settles closes the gap: on the validation runs, CA3 accuracy rose from 61.4% to 67.8% when the cue counted as much as the recurrent input (cue weight 1), against 65.2% for the pseudo-inverse rule. Larger DG and CA3 moved CA3 accuracy by about a point. Every number is in `results/bio_e1.md`.
+The local rules still score about 7 points below the pseudo-inverse rule. Passing on the 10 most active PR cells without any settling scores 64.3%, above every rule that settles, so CA3's settling pulls some new drawings into the wrong memory. Letting the PR cue keep driving CA3 while it settles helps for the same reason: on the validation runs at 1,000 cells, CA3 accuracy rose from 61.4% to 67.8% at cue weight 1, and no settling at all scored 72.3%. At that weight the cue is about 25 times stronger than the recurrent input from the covariance weights, so most of the gain comes from settling less. Larger DG and CA3 moved CA3 accuracy by about a point. Every number is in `results/bio_e1.md`.
 
 ## Install
 

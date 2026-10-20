@@ -1,6 +1,6 @@
 # Adapted from github.com/sachio222/aha4 (MIT), utils/data.py at 446d6db.
 # New here: load_background_runs, validation runs built from the background
-# alphabets.
+# alphabets, and load_instance_runs for AHA's instance task.
 """Omniglot: Lake's 20 one-shot runs and validation runs like them.
 
 Omniglot (Lake, Salakhutdinov and Tenenbaum 2015) has 1623 handwritten
@@ -13,6 +13,10 @@ the folder that aha4 downloads into, ../aha4/data, which holds:
 
     omniglot-py/images_background/   the 30 background alphabets
     omniglot-runs/run01 ... run20/   the official one-shot runs
+
+aha4 never downloads the evaluation alphabets as whole folders, and this
+project never writes into aha4, so they go to ./data instead (see
+download_alphabets).
 """
 
 import hashlib
@@ -29,6 +33,8 @@ from torchvision import transforms
 REPO = Path(__file__).resolve().parents[2]
 DEFAULT_DATA = REPO.parent / "aha4" / "data"
 DEFAULT_CHECKPOINT = REPO.parent / "aha4" / "checkpoints" / "vc_pretrained.pth.tar"
+# Where this project keeps data that aha4 does not have.
+LOCAL_DATA = REPO / "data"
 
 RUNS_URL = ("https://raw.githubusercontent.com/brendenlake/omniglot/master/"
             "python/one-shot-classification/all_runs.zip")
@@ -36,6 +42,13 @@ RUNS_SHA256 = "437c1eeab0af8484112e1b4cc0f3d541ec727f7c47b9b202da738af9dfd6c325"
 N_RUNS = 20
 RUN_SIZE = 20       # characters per run
 N_DRAWERS = 20      # people who drew every character
+
+ALPHABETS_URL = ("https://raw.githubusercontent.com/brendenlake/omniglot/master/"
+                 "python/images_{}.zip")
+# The evaluation zip's MD5 matches torchvision's (6b91aef0f799c5bb55b94e3f2daec811).
+ALPHABETS_SHA256 = {
+    "evaluation": "1f61a8f3366785b057fc117d9228e78a16e3d976c8953b2a10fcc74cf0609cee",
+}
 
 
 def invert(x):
@@ -96,6 +109,15 @@ def parse_class_labels(lines):
     return [cls for _, cls in sorted(pairs)]
 
 
+def _safe_extract(archive, folder):
+    with zipfile.ZipFile(archive) as z:
+        for name in z.namelist():
+            # Refuse anything that would unpack outside the folder.
+            if name.startswith("/") or ".." in Path(name).parts:
+                raise RuntimeError("Unsafe path in archive: {}".format(name))
+        z.extractall(folder)
+
+
 def download_runs(root=DEFAULT_DATA):
     """Downloads and unpacks the 20 official runs once. Returns the folder."""
     folder = Path(root) / "omniglot-runs"
@@ -112,12 +134,33 @@ def download_runs(root=DEFAULT_DATA):
     if digest != RUNS_SHA256:
         raise RuntimeError("all_runs.zip checksum mismatch: {}".format(digest))
 
-    with zipfile.ZipFile(archive) as z:
-        for name in z.namelist():
-            # Refuse anything that would unpack outside the folder.
-            if name.startswith("/") or ".." in Path(name).parts:
-                raise RuntimeError("Unsafe path in archive: {}".format(name))
-        z.extractall(folder)
+    _safe_extract(archive, folder)
+    return folder
+
+
+def download_alphabets(split, root=LOCAL_DATA):
+    """The folder of one Omniglot split, downloading it once if needed.
+
+    Returns root/omniglot-py/images_<split>. Only the evaluation split can
+    be downloaded here. The background split comes from aha4's folder.
+    """
+    folder = Path(root) / "omniglot-py" / "images_{}".format(split)
+    if folder.is_dir():
+        return folder
+    if split not in ALPHABETS_SHA256:
+        raise FileNotFoundError("No {} alphabets at {}".format(split, folder))
+
+    folder.parent.mkdir(parents=True, exist_ok=True)
+    archive = folder.parent / "images_{}.zip".format(split)
+    if not archive.is_file():
+        url = ALPHABETS_URL.format(split)
+        print("Downloading {}".format(url))
+        urllib.request.urlretrieve(url, archive)
+
+    digest = hashlib.sha256(archive.read_bytes()).hexdigest()
+    if digest != ALPHABETS_SHA256[split]:
+        raise RuntimeError("{} checksum mismatch: {}".format(archive.name, digest))
+    _safe_extract(archive, folder.parent)
     return folder
 
 
@@ -213,5 +256,63 @@ def load_background_runs(root=DEFAULT_DATA, image_size=52, centre=True, seed=0,
             "labels": torch.tensor(order),
             "info": {"alphabet": alphabet, "characters": chosen,
                      "study_drawer": study_drawer, "test_drawer": test_drawer},
+        })
+    return runs
+
+
+def load_instance_runs(root=LOCAL_DATA, image_size=52, centre=True, seed=0,
+                       split="evaluation", n_runs=N_RUNS):
+    """Builds runs for AHA's one-shot instance-classification task.
+
+    AHA's paper, Section 3.2: "the train character exemplar must be matched
+    with the exact same exemplar amongst a set of 20 distractor exemplars of
+    the same character class. [...] In each run, the character class and
+    exemplars are selected by randomly sampling without repeats from the
+    'evaluation' set."
+
+    Each run here:
+      * one character, drawn without repeats across runs from every
+        character in the split,
+      * all 20 of its drawings, one per drawer, as the study set in a
+        shuffled drawer order,
+      * the same 20 drawings again as the test set, in another shuffled
+        order, with labels pointing at the study item each one is,
+      * the same preprocessing as Lake's runs.
+
+    split="background" builds the same runs from the 30 background
+    alphabets, for trying settings without touching the evaluation set.
+    The draw comes from `seed` alone.
+
+    Returns runs shaped like load_runs(), each with an "info" dict naming
+    the split, alphabet, character and study drawer order.
+    """
+    folder = download_alphabets(split, root)
+    load = _loader(image_size, centre)
+    rng = random.Random(seed)
+
+    characters = sorted((a.name, c.name) for a in folder.iterdir() if a.is_dir()
+                        for c in a.iterdir() if c.is_dir())
+    if len(characters) < n_runs:
+        raise ValueError("Only {} characters in {}".format(len(characters), folder))
+
+    runs = []
+    for alphabet, character in rng.sample(characters, n_runs):
+        files = {int(p.stem.split("_")[1]): p
+                 for p in (folder / alphabet / character).glob("*_*.png")}
+        if sorted(files) != list(range(1, N_DRAWERS + 1)):
+            raise FileNotFoundError("Expected drawers 1 to {} in {}/{}".format(
+                N_DRAWERS, alphabet, character))
+        drawers = rng.sample(range(1, N_DRAWERS + 1), N_DRAWERS)
+        order = list(range(N_DRAWERS))
+        rng.shuffle(order)
+
+        study = torch.stack([load(files[d]) for d in drawers])
+        labels = torch.tensor(order)
+        runs.append({
+            "study": study,
+            "recall": study[labels].clone(),
+            "labels": labels,
+            "info": {"split": split, "alphabet": alphabet, "character": character,
+                     "drawers": drawers},
         })
     return runs

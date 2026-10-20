@@ -98,40 +98,75 @@ def evaluate(aha, runs, seeds, stages=STAGES, direction=DIRECTIONS[0], normalise
     recall-loss, the wall time, and with diagnostics=True, per-seed means of
     each diagnostic.
     """
+    levels = [(0.0, [run["recall"] for run in runs])]
+    result = evaluate_levels(aha, runs, levels, seeds, stages, direction, normalise,
+                             diagnostics, log)[0]
+    del result["level"]
+    return result
+
+
+def evaluate_levels(aha, runs, levels, seeds, stages=STAGES, direction=DIRECTIONS[0],
+                    normalise=False, diagnostics=False, log=print):
+    """Scores one study against several versions of the test drawings.
+
+    E1b corrupts the test drawings at many levels. The study set and the
+    hippocampus it trains are the same at every level, so each (seed, run)
+    studies once and then recalls each version in turn. Recall never
+    learns. The random generator that bipolar settling draws from goes back
+    to its state after study before each level, so a level scores the same
+    whatever other levels run with it, and a lone clean level scores
+    exactly as evaluate() does.
+
+    Args:
+        levels: list of (level, test drawings), where test drawings is a
+            list with one (20, 1, H, W) tensor per run. Keep the same
+            tensors across calls and the VC cache encodes each one once.
+
+    Returns one dict per level, in the order given, shaped like evaluate()'s
+    result plus the level.
+    """
     start = time.time()
-    acc = {stage: [] for stage in stages}
-    diag = {name: [] for name in DIAGNOSTICS}
-    loss = []
+    out = [{"level": level, "accuracy": {stage: [] for stage in stages}, "recall_loss": [],
+            "diagnostics": {name: [] for name in DIAGNOSTICS}} for level, _ in levels]
 
     for seed in seeds:
-        per_run = {stage: [] for stage in stages}
-        per_run_diag = {name: [] for name in DIAGNOSTICS}
-        per_run_loss = []
+        per_run = [{"accuracy": {stage: [] for stage in stages}, "recall_loss": [],
+                    "diagnostics": {name: [] for name in DIAGNOSTICS}} for _ in levels]
         for i, run in enumerate(runs):
             aha.reset(seed=seed * 1000 + i)
             study = aha.study(run["study"])
-            recall = aha.recall(run["recall"])
+            after_study = aha.generator.get_state()
+            for (_, tests), acc in zip(levels, per_run):
+                aha.generator.set_state(after_study)
+                recall = aha.recall(tests[i])
+                for stage in stages:
+                    acc["accuracy"][stage].append(run_accuracy(
+                        study[stage], recall[stage], run["labels"], direction, normalise))
+                acc["recall_loss"].append(recall_loss(recall["pm"], run["study"], run["labels"]))
+                if diagnostics:
+                    for name, value in run_diagnostics(aha, study, recall, run["labels"]).items():
+                        acc["diagnostics"][name].append(value)
+
+        for res, acc in zip(out, per_run):
             for stage in stages:
-                per_run[stage].append(run_accuracy(study[stage], recall[stage], run["labels"],
-                                                   direction, normalise))
-            per_run_loss.append(recall_loss(recall["pm"], run["study"], run["labels"]))
+                res["accuracy"][stage].append(sum(acc["accuracy"][stage]) / len(runs))
+            res["recall_loss"].append(sum(acc["recall_loss"]) / len(runs))
+            line = "seed {:>3}  ".format(seed)
+            if len(levels) > 1:
+                line += "level {:<5g} ".format(res["level"])
+            line += "  ".join("{} {:.1%}".format(stage, res["accuracy"][stage][-1])
+                              for stage in stages)
             if diagnostics:
-                for name, value in run_diagnostics(aha, study, recall, run["labels"]).items():
-                    per_run_diag[name].append(value)
+                for name in DIAGNOSTICS:
+                    res["diagnostics"][name].append(statistics.mean(acc["diagnostics"][name]))
+                line += "  self-recall {:.1%}  dg same {:.2f} diff {:.2f}".format(
+                    res["diagnostics"]["self_recall_exact"][-1],
+                    res["diagnostics"]["dg_same"][-1], res["diagnostics"]["dg_diff"][-1])
+            log(line + "  ({:.0f} s)".format(time.time() - start))
 
-        for stage in stages:
-            acc[stage].append(sum(per_run[stage]) / len(runs))
-        loss.append(sum(per_run_loss) / len(runs))
-        line = "seed {:>3}  ".format(seed) + "  ".join(
-            "{} {:.1%}".format(stage, acc[stage][-1]) for stage in stages)
-        if diagnostics:
-            for name in DIAGNOSTICS:
-                diag[name].append(statistics.mean(per_run_diag[name]))
-            line += "  self-recall {:.1%}  dg same {:.2f} diff {:.2f}".format(
-                diag["self_recall_exact"][-1], diag["dg_same"][-1], diag["dg_diff"][-1])
-        log(line + "  ({:.0f} s)".format(time.time() - start))
-
-    result = {"accuracy": acc, "recall_loss": loss, "seconds": time.time() - start}
-    if diagnostics:
-        result["diagnostics"] = diag
-    return result
+    seconds = time.time() - start
+    for res in out:
+        res["seconds"] = seconds
+        if not diagnostics:
+            del res["diagnostics"]
+    return out

@@ -1,6 +1,7 @@
 # Adapted from github.com/sachio222/aha4 (MIT), evaluate.py at 446d6db.
 # New here: the local CA3 rules, DG and CA3 size, cue weight, validation
-# runs, and per-seed diagnostics in the output.
+# runs, per-seed diagnostics in the output, and E1b's instance task and
+# corrupted test drawings.
 """Scores the model on one-shot Omniglot runs, once per seed.
 
 In each run the model studies 20 drawings, recalls 20 drawings of the same
@@ -17,11 +18,21 @@ each stage:
 validation runs built from the background alphabets, for choosing
 settings without touching Lake's runs.
 
+--task instance scores AHA's one-shot instance-classification task
+instead: study 20 drawings of one character, then find each one again
+among the same 20. --runs official builds these runs from the evaluation
+alphabets, --runs background from the background alphabets.
+
+--occlusion and --noise corrupt the test drawings, never the study
+drawings, at one or more levels (see fh/data/corrupt.py). Each (seed, run)
+studies once and recalls every level, so one call covers a whole sweep.
+
 Seeds set the hippocampal parts only. The vision network comes from the
 checkpoint, so the vc and pixels scores are the same on every seed.
 
 Example:
     python -m fh.eval.evaluate --runs background --ca3-rule covariance --seeds 5 --normalise
+    python -m fh.eval.evaluate --task instance --noise 0 0.3 0.6 --normalise
 """
 
 import argparse
@@ -33,7 +44,7 @@ from pathlib import Path
 
 import torch
 
-from fh.data import omniglot
+from fh.data import corrupt, omniglot
 from fh.eval import oneshot
 from fh.model import modules
 from fh.model.aha import AHA, AHAConfig, load_vc
@@ -45,7 +56,7 @@ REPO = Path(__file__).resolve().parents[2]
 PAPER_UNITS, PAPER_UPDATE = 225, 20
 
 
-def parse_args(argv=None):
+def build_parser():
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     p.add_argument("--checkpoint", default=str(omniglot.DEFAULT_CHECKPOINT),
                    help="pretrained vision network, aha4's by default")
@@ -53,8 +64,18 @@ def parse_args(argv=None):
                    help="Omniglot folder, aha4's by default")
     p.add_argument("--runs", default="official", choices=["official", "background"],
                    help="Lake's 20 runs, or 20 validation runs from the background alphabets")
+    p.add_argument("--eval-data-dir", default=str(omniglot.LOCAL_DATA),
+                   help="where the evaluation alphabets for --task instance live or download to")
+    p.add_argument("--task", default="classification", choices=["classification", "instance"],
+                   help="match each drawing's character (Lake), or the very drawing (AHA)")
     p.add_argument("--runs-seed", type=int, default=0,
-                   help="which validation runs to build, separate from the model seed")
+                   help="which validation or instance runs to build, separate from the model seed")
+    p.add_argument("--occlusion", type=float, nargs="+", default=[0.0],
+                   help="circle diameters over the side, one or more, on test drawings")
+    p.add_argument("--noise", type=float, nargs="+", default=[0.0],
+                   help="shares of pixels replaced, one or more, on test drawings")
+    p.add_argument("--corruption-seed", type=int, default=0,
+                   help="fixes every circle and noisy pixel, separate from the model seed")
     p.add_argument("--device", default="auto", help="auto, cpu, mps or cuda")
     p.add_argument("--seeds", type=int, default=10, help="how many seeds to repeat over")
     p.add_argument("--first-seed", type=int, default=0)
@@ -73,8 +94,30 @@ def parse_args(argv=None):
     p.add_argument("--normalise-input", action="store_true",
                    help="L2-normalise the VC output before it feeds DG and PR")
     p.add_argument("--out", default=None,
-                   help="output JSON; by default results/bio_e1_<runs>_<rule>_<units>_<k>[_cw<w>][_it<n>].json")
-    return p.parse_args(argv)
+                   help="output JSON; by default results/bio_e1_<runs>_<rule>_<units>_<k>[_cw<w>][_it<n>].json,"
+                        " or e1b_<task>_<runs>_..._<corruption>.json for E1b")
+    return p
+
+
+def parse_args(argv=None):
+    return build_parser().parse_args(argv)
+
+
+def corruption_levels(args):
+    """The corruption kind and its levels, from --occlusion and --noise.
+
+    Returns ("none", [0.0]) when neither is set. A sweep may include 0,
+    the clean drawings. Occlusion and noise never mix in one call.
+    """
+    occlusion = any(level != 0 for level in args.occlusion)
+    noise = any(level != 0 for level in args.noise)
+    if occlusion and noise:
+        build_parser().error("use --occlusion or --noise, not both")
+    if occlusion:
+        return "occlusion", list(args.occlusion)
+    if noise:
+        return "noise", list(args.noise)
+    return "none", [0.0]
 
 
 def build_config(args):
@@ -94,11 +137,17 @@ def build_config(args):
 
 
 def default_out(args):
-    name = "bio_e1_{}_{}_{}_{}".format(args.runs, args.ca3_rule, args.dg_units, args.dg_k)
+    """E1's name for a clean classification run, E1b's name otherwise."""
+    kind, _ = corruption_levels(args)
+    e1 = args.task == "classification" and kind == "none"
+    prefix = "bio_e1" if e1 else "e1b_{}".format(args.task)
+    name = "{}_{}_{}_{}_{}".format(prefix, args.runs, args.ca3_rule, args.dg_units, args.dg_k)
     if args.ca3_cue_weight:
         name += "_cw{:g}".format(args.ca3_cue_weight)
     if args.ca3_iters != 70:
         name += "_it{}".format(args.ca3_iters)
+    if not e1:
+        name += "_{}".format(kind)
     return REPO / "results" / (name + ".json")
 
 
@@ -110,6 +159,11 @@ def summarise(values):
 
 def load(args, config):
     centre = True
+    if args.task == "instance":
+        split, root = (("evaluation", args.eval_data_dir) if args.runs == "official"
+                       else ("background", args.data_dir))
+        return omniglot.load_instance_runs(root, config.image_size, centre,
+                                           seed=args.runs_seed, split=split)
     if args.runs == "official":
         return omniglot.load_runs(args.data_dir, config.image_size, centre)
     return omniglot.load_background_runs(args.data_dir, config.image_size, centre,
@@ -121,30 +175,48 @@ def main(argv=None):
     device = resolve_device(args.device)
     set_seed(args.first_seed)
     config = build_config(args)
+    kind, values = corruption_levels(args)
     runs = load(args, config)
 
-    print("Device: {}. {} {} runs x {} seeds. CA3 {}, {} cells, {} on, cue weight {:g}.".format(
-        device, len(runs), args.runs, args.seeds, config.ca3_rule, config.dg_units,
+    print("Device: {}. {} {} {} runs x {} seeds. CA3 {}, {} cells, {} on, cue weight {:g}.".format(
+        device, len(runs), args.runs, args.task, args.seeds, config.ca3_rule, config.dg_units,
         config.dg_k, config.ca3_cue_weight), flush=True)
+    if kind != "none":
+        print("Test drawings: {} at {}, corruption seed {}.".format(
+            kind, ", ".join("{:g}".format(v) for v in values), args.corruption_seed), flush=True)
+
+    # Each level's corrupted drawings are built once and kept, so the VC
+    # cache encodes them once for all seeds.
+    levels = [(level, [run["recall"] if kind == "none" else
+                       corrupt.corrupt(run["recall"], kind, level, args.corruption_seed, i)
+                       for i, run in enumerate(runs)]) for level in values]
 
     vc = load_vc(args.checkpoint, device=device)
     aha = AHA(vc, config, device=device)
     aha.cache_vc(True)
     seeds = range(args.first_seed, args.first_seed + args.seeds)
-    result = oneshot.evaluate(aha, runs, seeds, direction=args.match,
-                              normalise=args.normalise, diagnostics=True,
-                              log=lambda line: print(line, flush=True))
+    results = oneshot.evaluate_levels(aha, runs, levels, seeds, direction=args.match,
+                                      normalise=args.normalise, diagnostics=True,
+                                      log=lambda line: print(line, flush=True))
 
-    summary = {stage: summarise(acc) for stage, acc in result["accuracy"].items()}
-    diagnostics = {name: summarise(v) for name, v in result["diagnostics"].items()}
+    records = []
+    for result in results:
+        summary = {stage: summarise(acc) for stage, acc in result["accuracy"].items()}
+        diagnostics = {name: summarise(v) for name, v in result["diagnostics"].items()}
+        records.append({"corruption": kind, "level": result["level"], "summary": summary,
+                        "recall_loss": summarise(result["recall_loss"]),
+                        "diagnostics": diagnostics, "per_seed": result})
 
-    print("\nOne-shot accuracy, mean over {} seeds".format(args.seeds))
-    for stage, s in summary.items():
-        print("{:<8}{:>8.1%}  ± {:.1%}".format(stage, s["mean"], s["std"]))
-    print("CA3 self-recall exact {:.1%}, overlap {:.2f}; DG overlap same {:.2f}, diff {:.2f}".format(
-        diagnostics["self_recall_exact"]["mean"], diagnostics["self_recall_overlap"]["mean"],
-        diagnostics["dg_same"]["mean"], diagnostics["dg_diff"]["mean"]))
-    print("Took {:.0f} s".format(result["seconds"]))
+        print("\n{} {:g}: one-shot accuracy, mean over {} seeds".format(
+            kind, result["level"], args.seeds))
+        for stage, s in summary.items():
+            print("{:<8}{:>8.1%}  ± {:.1%}".format(stage, s["mean"], s["std"]))
+        print("recall-loss {:.4f}".format(records[-1]["recall_loss"]["mean"]))
+        print("CA3 self-recall exact {:.1%}, overlap {:.2f}; DG overlap same {:.2f}, diff {:.2f}".format(
+            diagnostics["self_recall_exact"]["mean"], diagnostics["self_recall_overlap"]["mean"],
+            diagnostics["dg_same"]["mean"], diagnostics["dg_diff"]["mean"]))
+    seconds = results[0]["seconds"]
+    print("Took {:.0f} s".format(seconds))
 
     out = Path(args.out) if args.out else default_out(args)
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -155,12 +227,16 @@ def main(argv=None):
         "device": str(device),
         "machine": platform.platform(),
         "torch": torch.__version__,
-        "summary": summary,
-        "diagnostics": diagnostics,
-        "seconds": result["seconds"],
-        "per_seed": result,
+        "seconds": seconds,
+        "levels": records,
     }
-    if args.runs == "background":
+    # A single level keeps E1's layout at the top level too.
+    if len(records) == 1:
+        for key in ("summary", "recall_loss", "diagnostics", "per_seed"):
+            record[key] = records[0][key]
+    if args.task == "instance":
+        record["instance_runs"] = [run["info"] for run in runs]
+    elif args.runs == "background":
         record["validation_runs"] = [run["info"] for run in runs]
     out.write_text(json.dumps(record, indent=2))
     print("Wrote {}".format(out))

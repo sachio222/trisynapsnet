@@ -1,6 +1,7 @@
 # Adapted from github.com/sachio222/aha4 (MIT), utils/data.py at 446d6db.
 # New here: load_background_runs, validation runs built from the background
-# alphabets, and load_instance_runs for AHA's instance task.
+# alphabets, load_instance_runs for AHA's instance task, and
+# load_characters, one drawing of every character, for E1c.
 """Omniglot: Lake's 20 one-shot runs and validation runs like them.
 
 Omniglot (Lake, Salakhutdinov and Tenenbaum 2015) has 1623 handwritten
@@ -316,3 +317,38 @@ def load_instance_runs(root=LOCAL_DATA, image_size=52, centre=True, seed=0,
                      "drawers": drawers},
         })
     return runs
+
+
+def load_characters(root=None, split="evaluation", image_size=52, centre=True, seed=0):
+    """One drawing of every character in a split, for E1c's load tests.
+
+    E1c stores many memories at once, one drawing each of different
+    characters. Each character's drawer is drawn at random from its 20,
+    from `seed` alone, so the same seed always gives the same drawings.
+    Characters come in sorted (alphabet, character) order.
+
+    root defaults to aha4's folder for the background split and to this
+    project's ./data for the evaluation split, which download_alphabets
+    fetches on first use.
+
+    Returns (images, info): images is (characters, 1, H, W), and info is a
+    list of {"alphabet", "character", "drawer"} in the same order.
+    """
+    if root is None:
+        root = DEFAULT_DATA if split == "background" else LOCAL_DATA
+    folder = download_alphabets(split, root)
+    load = _loader(image_size, centre)
+    rng = random.Random(seed)
+
+    characters = sorted((a.name, c.name) for a in folder.iterdir() if a.is_dir()
+                        for c in a.iterdir() if c.is_dir())
+    images, info = [], []
+    for alphabet, character in characters:
+        drawer = rng.randint(1, N_DRAWERS)
+        matches = sorted((folder / alphabet / character).glob("*_{:02d}.png".format(drawer)))
+        if len(matches) != 1:
+            raise FileNotFoundError("Expected one drawing by drawer {} in {}/{}".format(
+                drawer, alphabet, character))
+        images.append(load(matches[0]))
+        info.append({"alphabet": alphabet, "character": character, "drawer": drawer})
+    return torch.stack(images), info

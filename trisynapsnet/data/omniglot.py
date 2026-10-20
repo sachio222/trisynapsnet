@@ -18,9 +18,14 @@ the folder that aha4 downloads into, ../aha4/data, which holds:
 aha4 never downloads the evaluation alphabets as whole folders, and this
 project never writes into aha4, so they go to ./data instead (see
 download_alphabets).
+
+Set TSN_AHA4 to aha4's folder when it does not sit next to this repo, as
+in a git worktree. Result files still record the standard layout,
+../aha4/..., through portable().
 """
 
 import hashlib
+import os
 import random
 import urllib.request
 import zipfile
@@ -32,10 +37,29 @@ from PIL import Image
 from torchvision import transforms
 
 REPO = Path(__file__).resolve().parents[2]
-DEFAULT_DATA = REPO.parent / "aha4" / "data"
-DEFAULT_CHECKPOINT = REPO.parent / "aha4" / "checkpoints" / "vc_pretrained.pth.tar"
+# aha4's folder: next to this repo, unless TSN_AHA4 says otherwise.
+AHA4 = Path(os.environ.get("TSN_AHA4", REPO.parent / "aha4")).resolve()
+DEFAULT_DATA = AHA4 / "data"
+DEFAULT_CHECKPOINT = AHA4 / "checkpoints" / "vc_pretrained.pth.tar"
 # Where this project keeps data that aha4 does not have.
 LOCAL_DATA = REPO / "data"
+
+
+def portable(path):
+    """A path as result files record it: relative to the repo, with aha4
+    written as ../aha4 wherever it lives on this machine.
+
+    A relative path is taken as already relative to the repo.
+    """
+    path = Path(path)
+    if not path.is_absolute():
+        return path.as_posix()
+    path = path.resolve()
+    if path.is_relative_to(REPO):
+        return path.relative_to(REPO).as_posix() or "."
+    if path.is_relative_to(AHA4):
+        return (Path("..") / "aha4" / path.relative_to(AHA4)).as_posix()
+    return os.path.relpath(path, REPO)
 
 RUNS_URL = ("https://raw.githubusercontent.com/brendenlake/omniglot/master/"
             "python/one-shot-classification/all_runs.zip")

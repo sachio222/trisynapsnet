@@ -62,6 +62,9 @@ class AHAConfig:
     ca1_plateau_share: float = 0.005  # share of CA1 cells that plateau per drawing
     ca1_connect: float = 0.6    # CA3-to-CA1 connection probability (Wu and Maass 2025)
     ca1_gate: float = 0.5       # chance an eligible synapse changes (Wu and Maass 2025)
+    ca1_ec3_baseline: bool = True  # "btsp": plateau drive against the mean background EC code
+    ca1_l2: float = 4e-4        # "backprop_ec": L2 penalty, PM's by default
+    ca1_target_scale: float = 1.0  # "backprop_ec": EC target multiplied by this
 
     @property
     def local_rule(self):
@@ -127,6 +130,9 @@ class AHA():
             p.requires_grad_(False)
         self.in_dim = self.vc.output_dim(self.cfg.image_size)
         self._vc_cache = None
+        # E4: the mean EC code of the background alphabets, CA1BTSP's EC3
+        # baseline. Set it before reset() when ca1_ec3_baseline is on.
+        self.ca1_baseline = None
 
     def reset(self, seed=0):
         """Builds a fresh hippocampus. Every run starts from new random weights."""
@@ -152,13 +158,16 @@ class AHA():
         # the same weights whichever CA1 runs.
         self.ca1 = None
         if cfg.ca1_rule == "btsp":
+            if cfg.ca1_ec3_baseline and self.ca1_baseline is None:
+                raise ValueError("ca1_ec3_baseline needs aha.ca1_baseline, the mean background EC code")
             self.ca1 = modules.CA1BTSP(cfg.dg_units, self.in_dim, cfg.ca1_units,
                                        cfg.ca1_plateau_share, cfg.ca1_connect, cfg.ca1_gate,
-                                       seed=seed)
+                                       seed=seed,
+                                       ec3_baseline=self.ca1_baseline if cfg.ca1_ec3_baseline else None)
         elif cfg.ca1_rule == "backprop_ec":
             self.ca1 = modules.CA1ToEC(cfg.dg_units, self.in_dim, cfg.pm_hidden).to(self.device)
             self.ca1_opt = torch.optim.Adam(self.ca1.parameters(), lr=cfg.pm_lr,
-                                            weight_decay=cfg.pm_l2)
+                                            weight_decay=cfg.ca1_l2)
 
     def cache_vc(self, on=True):
         """Keeps each batch's vision code after the first time it is seen.
@@ -220,7 +229,7 @@ class AHA():
             self.ca1.store(stored > 0, vc)
         else:
             for _ in range(self.cfg.study_steps):
-                loss = F.mse_loss(self.ca1(stored), vc)
+                loss = F.mse_loss(self.ca1(stored), vc * self.cfg.ca1_target_scale)
                 self.ca1_opt.zero_grad()
                 loss.backward()
                 self.ca1_opt.step()

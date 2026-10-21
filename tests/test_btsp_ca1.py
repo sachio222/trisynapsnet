@@ -192,6 +192,16 @@ def test_backprop_baseline_returns_ec_codes():
     assert out.shape == (4, 20449)
 
 
+def test_btsp_needs_the_background_baseline():
+    cfg = AHAConfig(image_size=8, ca1_rule="btsp", ca1_units=300, pr_hidden=20)
+    aha = AHA(_VC(), cfg)
+    with pytest.raises(ValueError):
+        aha.reset(seed=0)
+    aha.ca1_baseline = torch.zeros(64)
+    aha.reset(seed=0)
+    assert aha.ca1.ec3_baseline is not None
+
+
 def test_default_config_keeps_aha_ca1():
     cfg = AHAConfig()
     assert cfg.ca1_rule == "pm"
@@ -214,6 +224,7 @@ def test_aha_with_ec_ca1_returns_ec_codes(rule):
     cfg = AHAConfig(image_size=8, ca3_rule="covariance", ca1_rule=rule, ca1_units=300,
                     ca1_plateau_share=0.02, study_steps=5, pr_hidden=20)
     aha = AHA(_VC(), cfg)
+    aha.ca1_baseline = torch.full((64,), 0.3)
     aha.reset(seed=0)
     images = (torch.rand(5, 1, 8, 8, generator=torch.Generator().manual_seed(0)) < 0.3).float()
     study = aha.study(images)
@@ -231,6 +242,7 @@ def test_ec_ca1_leaves_ca3_and_pr_unchanged():
         cfg = AHAConfig(image_size=8, ca3_rule="covariance", ca1_rule=rule, ca1_units=300,
                         ca1_plateau_share=0.02, study_steps=5, pr_hidden=20)
         aha = AHA(_VC(), cfg)
+        aha.ca1_baseline = torch.full((64,), 0.3)
         aha.reset(seed=0)
         aha.study(images)
         out[rule] = aha.recall(images)

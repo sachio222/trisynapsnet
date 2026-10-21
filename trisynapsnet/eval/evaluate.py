@@ -93,6 +93,16 @@ def build_parser():
                    help="L2-normalise every stage's vectors before MSE matching")
     p.add_argument("--normalise-input", action="store_true",
                    help="L2-normalise the VC output before it feeds DG and PR")
+    p.add_argument("--ca1-rule", default="pm", choices=["pm", "btsp", "backprop_ec"],
+                   help="E4: AHA's CA1 (pixels), one-shot BTSP CA1, or PM's network with EC as target")
+    p.add_argument("--ca1-units", type=int, default=2118, help="CA1 cells for --ca1-rule btsp")
+    p.add_argument("--ca1-plateau-share", type=float, default=0.005,
+                   help="share of CA1 cells that plateau per drawing, --ca1-rule btsp")
+    p.add_argument("--ca1-ec3-baseline", default="background-mean",
+                   choices=["background-mean", "none"], help="plateau drive baseline, --ca1-rule btsp")
+    p.add_argument("--ca1-l2", type=float, default=4e-4, help="L2 penalty, --ca1-rule backprop_ec")
+    p.add_argument("--cache-dir", default=None,
+                   help="folder with E1c's cached vision codes, for the background mean EC code")
     p.add_argument("--out", default=None,
                    help="output JSON; by default results/bio_e1_<runs>_<rule>_<units>_<k>[_cw<w>][_it<n>].json,"
                         " or e1b_<task>_<runs>_..._<corruption>.json for E1b")
@@ -133,14 +143,18 @@ def build_config(args):
     return AHAConfig(ca3_rule=args.ca3_rule, study_steps=args.study_steps,
                      normalise_input=args.normalise_input, dg_units=args.dg_units,
                      dg_k=args.dg_k, ca3_cue_weight=args.ca3_cue_weight,
-                     ca3_iters=args.ca3_iters, ca3_update=update)
+                     ca3_iters=args.ca3_iters, ca3_update=update,
+                     ca1_rule=args.ca1_rule, ca1_units=args.ca1_units,
+                     ca1_plateau_share=args.ca1_plateau_share,
+                     ca1_ec3_baseline=args.ca1_ec3_baseline == "background-mean",
+                     ca1_l2=args.ca1_l2)
 
 
 def recorded_args(args):
     """The arguments as the result file records them, with every path
     made portable (see omniglot.portable)."""
     recorded = dict(vars(args))
-    for key in ("checkpoint", "data_dir", "eval_data_dir", "out"):
+    for key in ("checkpoint", "data_dir", "eval_data_dir", "out", "cache_dir"):
         if recorded.get(key) is not None:
             recorded[key] = omniglot.portable(recorded[key])
     return recorded
@@ -203,6 +217,9 @@ def main(argv=None):
 
     vc = load_vc(args.checkpoint, device=device)
     aha = AHA(vc, config, device=device)
+    if config.ca1_rule == "btsp" and config.ca1_ec3_baseline:
+        from trisynapsnet.eval import ca1space
+        aha.ca1_baseline = ca1space.background_reference(args.cache_dir)[0]
     aha.cache_vc(True)
     seeds = range(args.first_seed, args.first_seed + args.seeds)
     results = oneshot.evaluate_levels(aha, runs, levels, seeds, direction=args.match,

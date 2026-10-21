@@ -446,6 +446,10 @@ def main(argv=None):
         _summarise(record["rows"])
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(json.dumps(record, indent=2))
+    if not record["complete"] and len(record["seeds"]) >= args.seeds:
+        # A longer run stopped once it had the seeds now asked for.
+        record["complete"] = True
+        out.write_text(json.dumps(record, indent=2))
     print("Wrote {}".format(omniglot.portable(out)))
 
 

@@ -189,3 +189,18 @@ def test_main_runs_drawings_up_to_the_characters_available(tmp_path, monkeypatch
     X, _ = ca3space.drawing_patterns(fake["vc"], 225, 16, 0)
     assert row["usage_cv"][0] == pytest.approx(
         sparsecodes.usage_cv(X[:20].topk(16, dim=1).indices, 225))
+
+
+def test_a_run_stopped_after_enough_seeds_is_marked_complete(tmp_path):
+    out = tmp_path / "e1d.json"
+    argv = ["--source", "random", "--rule", "willshaw", "--units", "225", "--sparsity", "2",
+            "--loads", "20", "--out", str(out)]
+    sparsecodes.main(argv + ["--seeds", "2"])
+    record = json.loads(out.read_text())
+    # As if a five-seed run had been stopped after two seeds.
+    record["complete"] = False
+    out.write_text(json.dumps(record))
+    sparsecodes.main(argv + ["--seeds", "2"])
+    again = json.loads(out.read_text())
+    assert again["complete"] and again["seeds"] == [0, 1]
+    assert again["rows"] == record["rows"]

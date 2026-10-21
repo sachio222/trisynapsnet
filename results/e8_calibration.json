@@ -1,0 +1,90 @@
+{
+ "source": "results/e8_background_n20_d1.json",
+ "seeds": [
+  0,
+  1,
+  2,
+  3,
+  4,
+  5,
+  6,
+  7,
+  8,
+  9
+ ],
+ "targets": {
+  "p_old_repeat": 0.812,
+  "p_new_foil": 0.82
+ },
+ "thresholds": {
+  "intact": {
+   "old": 0.967863,
+   "q_old": 1.0,
+   "new": 0.502918,
+   "q_new": 0.9999999999998899,
+   "feasible": true
+  },
+  "no_recurrent": {
+   "old": 0.967209,
+   "q_old": 1.0,
+   "new": 0.554126,
+   "q_new": 0.9999999999998899,
+   "feasible": true
+  },
+  "no_ca3": {
+   "old": 0.976699,
+   "q_old": 1.0,
+   "new": 0.49964,
+   "q_new": 0.9999999999998899,
+   "feasible": true
+  },
+  "vc_baseline": {
+   "old": 1.0,
+   "q_old": 0.8112058465286237,
+   "new": 0.540433,
+   "q_new": 0.9999999999998899,
+   "feasible": true
+  },
+  "no_dg": {
+   "old": 0.745785,
+   "q_old": 1.0,
+   "new": 0.544318,
+   "q_new": 0.9999999999998899,
+   "feasible": true
+  },
+  "pp_keep0.75": {
+   "old": 0.967863,
+   "q_old": 1.0,
+   "new": 0.498897,
+   "q_new": 0.9999999999998899,
+   "feasible": true
+  },
+  "pp_keep0.5": {
+   "old": 0.967473,
+   "q_old": 1.0,
+   "new": 0.492687,
+   "q_new": 0.9999999999998899,
+   "feasible": true
+  },
+  "pp_keep0.25": {
+   "old": 0.964314,
+   "q_old": 1.0,
+   "new": 0.471819,
+   "q_new": 0.9999999999998899,
+   "feasible": true
+  },
+  "ca1_half": {
+   "old": 0.952774,
+   "q_old": 1.0,
+   "new": 0.494896,
+   "q_new": 0.9999999999998899,
+   "feasible": true
+  }
+ },
+ "bin_edges": [
+  0.4618354,
+  0.5371966,
+  0.5972548,
+  0.66339
+ ]
+}

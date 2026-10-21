@@ -583,3 +583,203 @@ class CA1(nn.Module):
         x = F.leaky_relu(self.fc1(x))
         x = F.leaky_relu(self.fc2(x))
         return x.view(-1, 1, self.image_size, self.image_size)
+
+
+class CA1ToEC(CA1):
+    """E4's backpropagation baseline: PM's network with EC as the target.
+
+    The same two layers, sizes and activations as CA1 (AHA's PM), trained
+    the same way, but its output is the drawing's EC code, the 20,449
+    numbers the vision network gives, instead of the drawing's pixels. It
+    lets one-shot CA1 (CA1BTSP) and backpropagation compare in EC space.
+    """
+
+    def __init__(self, D_in=225, D_out=20449, hidden=100):
+        super(CA1ToEC, self).__init__(D_in, D_out, hidden, image_size=None)
+
+    def forward(self, x):
+        x = F.leaky_relu(self.fc1(x))
+        return F.leaky_relu(self.fc2(x))
+
+
+def btsp_parameters():
+    """Every setting of CA1BTSP that is not fixed by the data, with its source.
+
+    source is "chosen" for a value picked on background-alphabet drawings,
+    "taken" for a value from a measurement or the published rule, and
+    "structural" for a modelling choice that has no number to tune.
+    """
+    return [
+        {"name": "plateau_share", "source": "chosen",
+         "why": "share of CA1 cells that get a plateau for each drawing (f_q in Wu and Maass "
+                "2025, measured near 0.005); chosen on background-alphabet drawings"},
+        {"name": "connect", "source": "taken",
+         "why": "probability that a CA3 cell synapses on a CA1 cell, 0.6 (f_w in Wu and Maass "
+                "2025, from about 15,000 inputs of 25,000)"},
+        {"name": "gate", "source": "taken",
+         "why": "probability 0.5 that an eligible synapse changes (Wu and Maass 2025, Eq. 1: "
+                "half the 10 s window gives LTP, half LTD)"},
+        {"name": "initial_weight", "source": "taken",
+         "why": "every CA3-to-CA1 weight starts at 0 (Wu and Maass 2025, Methods)"},
+        {"name": "ca1_units", "source": "taken",
+         "why": "CA1 cells per CA3 cell, the human ratio 16M/1.7M or the rat ratio 350k/210k"},
+        {"name": "window", "source": "structural",
+         "why": "each plateau's seconds-long window covers one drawing and no neighbour"},
+        {"name": "ec3_projection", "source": "structural",
+         "why": "fixed random positive weights in [0, 1) from EC to every CA1 cell decide which "
+                "cells plateau: the m most driven (stand-in for the plateau threshold)"},
+        {"name": "recall_readout", "source": "structural",
+         "why": "k-winners-take-all keeps the m most driven CA1 cells, ties broken at random "
+                "(stand-in for feedback inhibition); m is the plateau count, no new value"},
+        {"name": "return_rule", "source": "structural",
+         "why": "CA1-to-EC weights grow by CA1 activity times EC activity, from zero, no "
+                "ceiling; its rate drops out of every cosine score"},
+    ]
+
+
+PLATEAU_SOURCES = ("ec3", "random")
+
+
+class CA1BTSP():
+    """CA1 that learns each drawing in one presentation by BTSP, for E4.
+
+    Biology. A CA1 pyramidal cell gets CA3 input on its proximal dendrites
+    and entorhinal layer III (EC3) input on its distal tuft. Strong EC3
+    input sets off a dendritic plateau potential (Grienberger and Magee
+    2022). A plateau changes the synapses from every CA3 input active within
+    a window of seconds around it, in one trial (Bittner and colleagues
+    2017), and the change runs both ways depending on the synapse's present
+    weight: weak inputs potentiate and strong inputs depress (Milstein and
+    colleagues 2021).
+
+    The rule. Wu and Maass (2025, Eq. 1) reduce this to binary synapses:
+    when an input arrives within the window of a plateau, with probability
+    0.5 a weight at 0 goes to 1 and a weight at 1 goes to 0; otherwise it
+    stays. I apply it independently at each synapse, as in their theory and
+    simulations. Weights start at 0, and each CA3 cell connects to each CA1
+    cell with probability connect (their f_w = 0.6).
+
+    The plateaus. Each drawing's EC code drives every CA1 cell through a
+    fixed random projection with positive weights (the instructive EC3
+    signal), and the m most driven cells plateau, m = plateau_share x units.
+    Picking the top m stands in for a plateau threshold.
+
+    Recall. CA1 sums its CA3 input through the learned binary weights, and
+    k-winners-take-all keeps the m most driven cells (ties broken at
+    random), a stand-in for feedback inhibition.
+
+    Return to EC. CA1-to-EC synapses learn in the same presentation, after
+    the BTSP step, by a Hebbian rule: each grows by the product of its CA1
+    cell's activity and its EC unit's activity (Wu and Maass's second step,
+    without their ceiling of 1, because EC codes are graded). The CA1
+    activity used is CA1's response to the drawing's CA3 pattern right
+    after its BTSP step, the trace that recall should bring back. The
+    weights R = sum over drawings of outer(trace, EC code) are kept as the
+    traces T and codes E, so that R is never built; reinstate() returns
+    activity @ T^T @ E, which is exactly activity @ R.
+
+    Everything runs on the CPU.
+    """
+
+    def __init__(self, n_in, ec_dim, units, plateau_share=0.005, connect=0.6, gate=0.5,
+                 seed=0, plateau_source="ec3"):
+        if plateau_source not in PLATEAU_SOURCES:
+            raise ValueError("plateau_source must be one of {}".format(", ".join(PLATEAU_SOURCES)))
+        self.plateau_source = plateau_source
+        self.n_in, self.ec_dim, self.units = n_in, ec_dim, units
+        self.plateau_share, self.connect, self.gate, self.seed = plateau_share, connect, gate, seed
+        self.m = max(1, int(round(plateau_share * units)))
+        g = torch.Generator().manual_seed(self._derive("connect"))
+        self.C = torch.rand(units, n_in, generator=g) < connect
+        self.W = torch.zeros(units, n_in)
+        self.generator = torch.Generator().manual_seed(self._derive("plasticity"))
+        self.T = torch.zeros(0, units)
+        self.E = torch.zeros(0, ec_dim)
+
+    def _derive(self, *parts):
+        import hashlib
+        key = ":".join(str(p) for p in ("ca1btsp", self.seed) + parts).encode()
+        return int(hashlib.sha256(key).hexdigest()[:15], 16)
+
+    def drive(self, E, block=256):
+        """EC3 drive to every CA1 cell, (drawings, units).
+
+        The projection has weights uniform in [0, 1), fixed by the seed. It
+        is made in blocks of CA1 cells and never kept, so a large CA1 costs
+        no memory.
+        """
+        E = E.detach().float().cpu()
+        out = torch.empty(E.shape[0], self.units)
+        for start in range(0, self.units, block):
+            stop = min(start + block, self.units)
+            g = torch.Generator().manual_seed(self._derive("ec3", start))
+            P = torch.rand(stop - start, self.ec_dim, generator=g)
+            out[:, start:stop] = E @ P.T
+        return out
+
+    def plateaus_from_drive(self, drive):
+        """1 for the m most driven cells of each row, 0 elsewhere."""
+        return kwta(drive, self.m)
+
+    def plateaus(self, E):
+        """Which cells plateau for each EC code, (drawings, units) 0/1.
+
+        With plateau_source="random", a control, m cells drawn at random
+        plateau for each drawing, whatever its EC code, as in Wu and Maass's
+        own simulations.
+        """
+        if self.plateau_source == "random":
+            g = torch.Generator().manual_seed(self._derive("random plateaus", E.shape[0]))
+            return self.plateaus_from_drive(torch.rand(E.shape[0], self.units, generator=g))
+        return self.plateaus_from_drive(self.drive(E))
+
+    def btsp(self, x, plateau):
+        """One presentation: Wu and Maass's Eq. 1 for one CA3 pattern.
+
+        Args:
+            x: (n_in,) CA3 activity, a cell counts as active above 0.
+            plateau: (units,) 1 where the CA1 cell has a plateau.
+        """
+        eligible = (plateau > 0)[:, None] & (x > 0)[None, :] & self.C
+        if self.gate < 1:
+            eligible &= torch.rand(self.W.shape, generator=self.generator) < self.gate
+        self.W = torch.where(eligible, 1.0 - self.W, self.W)
+        return self.W
+
+    def respond(self, X):
+        """CA1 activity for CA3 states X, (batch, n_in) -> (batch, units) 0/1."""
+        X = (X.detach().cpu() > 0).float()
+        h = X @ (self.W * self.C).T
+        # h counts whole synapses, so a jitter below 1 only orders ties.
+        jitter = 0.5 * torch.rand(h.shape, generator=self.generator)
+        return kwta(h + jitter, self.m)
+
+    def store(self, X, E):
+        """Learns each (CA3 pattern, EC code) pair in one presentation, in order.
+
+        Args:
+            X: (drawings, n_in) CA3 patterns, active above 0.
+            E: (drawings, ec_dim) EC codes, the drawings' vision codes.
+        """
+        X = (X.detach().cpu() > 0).float()
+        E = E.detach().float().cpu()
+        plateaus = self.plateaus(E)
+        traces = torch.zeros(X.shape[0], self.units)
+        for t in range(X.shape[0]):
+            self.btsp(X[t], plateaus[t])
+            traces[t] = self.respond(X[t:t + 1])[0]
+        self.T = torch.cat([self.T, traces])
+        self.E = torch.cat([self.E, E])
+        return traces
+
+    def return_weights(self):
+        """The CA1-to-EC weights R, (units, ec_dim). Built only for tests."""
+        return self.T.T @ self.E
+
+    def reinstate(self, activity):
+        """EC code returned by CA1 activity, activity @ R."""
+        return (activity.float().cpu() @ self.T.T) @ self.E
+
+    def __call__(self, X):
+        """CA3 states -> CA1 activity -> returned EC codes."""
+        return self.reinstate(self.respond(X))

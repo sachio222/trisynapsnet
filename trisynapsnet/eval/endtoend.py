@@ -80,9 +80,9 @@ def score_level(aha, study, recall, labels, cue_recall):
     start = modules.kwta(recall["pr"], k)
     control = start if aha.cfg.local_rule else modules.condition_memorise(start)
     states = {"vc": recall["vc"], "pr": recall["pr"], "pc": recall["pc"], "pc_none": control,
-              "pm": recall["pm"], "pm_none": aha.pm(control)}
+              "pm": recall["pm"], "pm_none": aha.ca1_out(control)}
     if cue_recall is not None:
-        states["pc_cue"], states["pm_cue"] = cue_recall, aha.pm(cue_recall)
+        states["pc_cue"], states["pm_cue"] = cue_recall, aha.ca1_out(cue_recall)
 
     out = {}
     for stage, state in states.items():

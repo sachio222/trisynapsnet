@@ -1,6 +1,6 @@
 # Adapted from github.com/sachio222/aha4 (MIT), model/aha.py at 446d6db.
 # New here: routing for the local CA3 rules, the cue weight, the CA3 start
-# option, and the self-recall and DG overlap diagnostics.
+# option, the self-recall and DG overlap diagnostics, and E4's CA1 options.
 """The full model: a frozen vision network feeding a resettable hippocampus.
 
 The wiring follows AHA (Kowadlo, Ahmed and Rawlinson 2019, Figure 4). One
@@ -52,9 +52,28 @@ class AHAConfig:
 
     study_steps: int = 60       # optimizer steps on the one study batch
 
+    # E4. "pm" is AHA's CA1, trained by backpropagation to rebuild the
+    # pixels. "btsp" learns each drawing in one presentation (CA1BTSP) and
+    # returns its EC code. "backprop_ec" is PM's network and training with
+    # the EC code as the target. With "btsp" or "backprop_ec", the "pm"
+    # stage holds a returned EC code instead of an image.
+    ca1_rule: str = "pm"
+    ca1_units: int = 2118       # CA1 cells for "btsp": 225 x 16M/1.7M, the human ratio
+    ca1_plateau_share: float = 0.005  # share of CA1 cells that plateau per drawing
+    ca1_connect: float = 0.6    # CA3-to-CA1 connection probability (Wu and Maass 2025)
+    ca1_gate: float = 0.5       # chance an eligible synapse changes (Wu and Maass 2025)
+
     @property
     def local_rule(self):
         return self.ca3_rule in modules.LOCAL_RULES
+
+    def check(self):
+        if self.ca1_rule not in CA1_RULES:
+            raise ValueError("ca1_rule must be one of {}".format(", ".join(CA1_RULES)))
+        return self
+
+
+CA1_RULES = ("pm", "btsp", "backprop_ec")
 
 
 def load_vc(checkpoint, interest_filter=True, device="cpu"):
@@ -101,7 +120,7 @@ class AHA():
     """
 
     def __init__(self, vc, config=None, device=torch.device("cpu")):
-        self.cfg = config or AHAConfig()
+        self.cfg = (config or AHAConfig()).check()
         self.device = torch.device(device)
         self.vc = vc.to(self.device).eval()
         for p in self.vc.parameters():
@@ -128,6 +147,18 @@ class AHA():
         # paper's L2 regularisation.
         self.pr_opt = torch.optim.Adam(self.pr.parameters(), lr=cfg.pr_lr, weight_decay=cfg.pr_l2)
         self.pm_opt = torch.optim.Adam(self.pm.parameters(), lr=cfg.pm_lr, weight_decay=cfg.pm_l2)
+
+        # E4's CA1 options are built last, so every earlier part starts from
+        # the same weights whichever CA1 runs.
+        self.ca1 = None
+        if cfg.ca1_rule == "btsp":
+            self.ca1 = modules.CA1BTSP(cfg.dg_units, self.in_dim, cfg.ca1_units,
+                                       cfg.ca1_plateau_share, cfg.ca1_connect, cfg.ca1_gate,
+                                       seed=seed)
+        elif cfg.ca1_rule == "backprop_ec":
+            self.ca1 = modules.CA1ToEC(cfg.dg_units, self.in_dim, cfg.pm_hidden).to(self.device)
+            self.ca1_opt = torch.optim.Adam(self.ca1.parameters(), lr=cfg.pm_lr,
+                                            weight_decay=cfg.pm_l2)
 
     def cache_vc(self, on=True):
         """Keeps each batch's vision code after the first time it is seen.
@@ -176,16 +207,37 @@ class AHA():
             loss.backward()
             self.pr_opt.step()
 
-        # CA1 learns to turn each stored CA3 pattern back into its drawing.
-        for _ in range(self.cfg.study_steps):
-            loss = F.mse_loss(self.pm(stored), images)
-            self.pm_opt.zero_grad()
-            loss.backward()
-            self.pm_opt.step()
+        if self.cfg.ca1_rule == "pm":
+            # CA1 learns to turn each stored CA3 pattern back into its drawing.
+            for _ in range(self.cfg.study_steps):
+                loss = F.mse_loss(self.pm(stored), images)
+                self.pm_opt.zero_grad()
+                loss.backward()
+                self.pm_opt.step()
+        elif self.cfg.ca1_rule == "btsp":
+            # One presentation per drawing: CA3 pattern in, EC code as the
+            # instructive signal and as the return target.
+            self.ca1.store(stored > 0, vc)
+        else:
+            for _ in range(self.cfg.study_steps):
+                loss = F.mse_loss(self.ca1(stored), vc)
+                self.ca1_opt.zero_grad()
+                loss.backward()
+                self.ca1_opt.step()
 
         with torch.no_grad():
             return {"pixels": images, "vc": vc, "dg": dg, "pr": self.pr(vc),
-                    "pc": stored, "pm": self.pm(stored)}
+                    "pc": stored, "pm": self.ca1_out(stored)}
+
+    @torch.no_grad()
+    def ca1_out(self, pc):
+        """The "pm" stage for CA3 states pc: an image for AHA's CA1, an EC
+        code for E4's."""
+        if self.cfg.ca1_rule == "pm":
+            return self.pm(pc)
+        if self.cfg.ca1_rule == "btsp":
+            return self.ca1(pc > 0).to(self.device)
+        return self.ca1(pc)
 
     def cue(self, pr):
         """The CA3 cue for a batch of PR outputs."""
@@ -200,7 +252,7 @@ class AHA():
         images = images.to(self.device)
         pr = self.pr(vc)
         pc = self.ca3.update(self.cue(pr), generator=self.generator)
-        return {"pixels": images, "vc": vc, "pr": pr, "pc": pc, "pm": self.pm(pc)}
+        return {"pixels": images, "vc": vc, "pr": pr, "pc": pc, "pm": self.ca1_out(pc)}
 
     @torch.no_grad()
     def self_recall(self, study):

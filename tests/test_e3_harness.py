@@ -159,3 +159,24 @@ def test_driver_refuses_to_resume_with_other_settings(tmp_path, monkeypatch):
     out.write_text(json.dumps({"args": perforant.recorded_args(args), "seeds_done": [0]}))
     with pytest.raises(SystemExit):
         perforant.main(["--out", str(out), "--dg-k", "5", "--device", "cpu"])
+
+
+def test_grid_scores_every_setting_without_study():
+    runs = synthetic_runs(n_runs=1)
+    baseline = torch.rand(20449) * 0.01
+    aha = model("btsp", baseline)
+    grid = perforant.grid_settings()
+    s = perforant.grid_score(aha, runs[0]["study"], [runs[0]["recall"]], runs[0]["labels"], 0,
+                             baseline, grid)[0]
+    for name in grid:
+        for arm in ("none", "settle"):
+            for d in perforant.DIRECTIONS:
+                assert 0.0 <= s["{} {} {}".format(name, arm, d)] <= 1.0
+    # Settings that differ only in recall share stored weights, so k-WTA cues
+    # with raw drive agree between the grid and the full harness.
+    full = perforant.study_and_score(aha, runs[0]["study"], [runs[0]["recall"]],
+                                     runs[0]["labels"], 0, perforant.default_settings(),
+                                     baseline)[0]
+    for d in perforant.DIRECTIONS:
+        assert s["cov_raw_kwta none " + d] == full["pp_cov_none ca3 " + d]
+        assert s["wil_pos_raw_kwta settle " + d] == full["pp_wil ca3 " + d]

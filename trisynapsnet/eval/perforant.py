@@ -123,6 +123,8 @@ def train_pm(aha, stored, images):
 def build_ca3s(aha, stored):
     """Both local CA3 rules on the same stored patterns. AHA's own CA3 is one."""
     cfg = aha.cfg
+    if aha.ca3.rule != cfg.ca3_rule:  # --grid skips study()
+        aha.ca3.train(stored, cfg.ca3_rule)
     ca3s = {cfg.ca3_rule: aha.ca3}
     for rule in modules.LOCAL_RULES:
         if rule not in ca3s:

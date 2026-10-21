@@ -174,6 +174,45 @@ def partial_table(rows, removal, add=0.0):
     return out
 
 
+def pm_table(rows):
+    """PM in pixel space with and without its L2 penalty, beside E1c's floor."""
+    e1c = load("e1c_ca3_drawings_evaluation_covariance_225_10")
+    floor = {}
+    if e1c is not None:
+        for r in e1c["rows"]:
+            if r["remove"] == 0 and r["add"] == 0:
+                floor[r["load"]] = r["summary"]["ca1_target"]["mean"]
+    out = ["## PM's error floor and its L2 penalty", "",
+           "PM, AHA's CA1, trained on pixels exactly as E1c trains it (Adam, learning rate 0.01, "
+           "60 full-batch steps, L2 penalty 4e-4), and the same without the L2 penalty. Input: the "
+           "exact stored CA3 pattern. Evaluation alphabets, 225 CA3 cells, the same drawings, "
+           "seeds and starting weights as E1c's CA1, 10 seeds. Error is mean squared error "
+           "against the drawing; identification picks the stored drawing nearest the "
+           "reconstruction by cosine.", "",
+           "| Load | E1c's CA1 error | PM error | PM error, no L2 | PM identification, % | "
+           "PM identification, no L2, % | Mean stored drawing's error |",
+           "|---|---|---|---|---|---|---|"]
+    for load_n, row in rows.items():
+        a = row["arms"]
+        out.append("| {} | {} | {:.4f} | {:.4f} | {} | {} | {:.4f} |".format(
+            load_n, "{:.4f}".format(floor[load_n]) if load_n in floor else "n/a",
+            a["pm_pixels"]["exact"]["mse"]["summary"]["mean"],
+            a["pm_pixels_nol2"]["exact"]["mse"]["summary"]["mean"],
+            cell(row, "pm_pixels", "exact"), cell(row, "pm_pixels_nol2", "exact"),
+            mean_drawing_error(load_n, e1c)))
+    out.append("")
+    return out
+
+
+def mean_drawing_error(load_n, e1c):
+    if e1c is None:
+        return float("nan")
+    for r in e1c["rows"]:
+        if r["load"] == load_n and r["remove"] == 0 and r["add"] == 0:
+            return r["summary"]["ca1_mean"]["mean"]
+    return float("nan")
+
+
 def stage_scores(name):
     """{(level): {(stage): mean}} from an evaluate.py result file."""
     rec = load(name)
@@ -281,6 +320,7 @@ def build():
         lines += load_table(rows, arms, "ident", "Identification against load, percent", note)
         lines += load_table(rows, arms, "cos", "Cosine similarity against load",
                             "Same runs. Cosine between the returned code and the right drawing's.")
+        lines += pm_table(rows)
         lines += ["## Partial cues", "",
                   "Identification in percent, same runs. A damaged copy of the stored pattern "
                   "reaches CA1 as it is, or after CA3 settles (E1c's settling).", ""]

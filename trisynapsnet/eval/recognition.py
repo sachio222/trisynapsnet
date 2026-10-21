@@ -142,9 +142,12 @@ class StreamDG():
         self.bound = math.sqrt(6.0 / (in_dim + units))
 
     def weights(self, start, stop):
+        # One uniform per synapse: below knockout the synapse is removed;
+        # otherwise its rescaled value gives a weight uniform in +-bound.
         g = torch.Generator().manual_seed(derive("e8b dg", self.seed, start))
-        W = (torch.rand(stop - start, self.in_dim, generator=g) * 2 - 1) * self.bound
-        keep = torch.rand(stop - start, self.in_dim, generator=g) >= self.knockout
+        u = torch.rand(stop - start, self.in_dim, generator=g)
+        keep = u >= self.knockout
+        W = ((u - self.knockout) / (1 - self.knockout) * 2 - 1) * self.bound
         return W * keep
 
     def drive(self, X):
@@ -214,7 +217,9 @@ def wire_perforant(n, ec_dim, seed, share=modules.PP_SHARE, block=256):
     C = torch.zeros(n, ec_dim, dtype=torch.bool)
     for start in range(0, n, block):
         stop = min(start + block, n)
-        idx = torch.rand(stop - start, ec_dim, generator=g).argsort(dim=1)[:, :in_degree]
+        # The in_degree smallest uniforms: the same set argsort()[:, :in_degree] picks.
+        idx = torch.rand(stop - start, ec_dim, generator=g).topk(in_degree, dim=1,
+                                                                largest=False).indices
         C[start:stop].scatter_(1, idx, True)
     return C
 
@@ -329,6 +334,17 @@ class Study():
         self.ca3_patterns = self.mossy.patterns(self.dg_patterns, cfg["ca3_k"])
         self.C = wire_perforant(cfg["ca3_units"], in_dim, seed)
         self.plateaus = None
+        self.test_plateaus = None
+
+    def share_plateaus(self, test_codes, baseline, cfg, seed):
+        """CA1's EC3 plateaus for the study and test codes, from one pass of
+        the projection (every arm of a list has the same CA1 projection)."""
+        ca1 = CA1Sparse(cfg["ca3_units"], self.study_codes.shape[1], cfg["ca1_units"],
+                        cfg["ca1_plateau_share"], cfg["ca1_connect"], cfg["ca1_gate"], seed=seed,
+                        ec3_baseline=baseline)
+        both = ca1.plateaus(torch.cat([self.study_codes, test_codes.float()]))
+        n = self.study_codes.shape[0]
+        self.plateaus, self.test_plateaus = both[:n], both[n:]
 
 
 class Memory():
@@ -337,6 +353,7 @@ class Memory():
     def __init__(self, study_codes, seed, baseline, cfg, shared, lesion=None):
         n, k, in_dim = cfg["ca3_units"], cfg["ca3_k"], study_codes.shape[1]
         self.cfg, self.seed, self.lesion, self.study_codes = cfg, seed, lesion, study_codes
+        self.shared = shared
         C = shared.C
         if lesion is not None and lesion.startswith("pp_keep"):
             C = bh.thin(shared.C, float(lesion[len("pp_keep"):]), seed)
@@ -385,8 +402,10 @@ class Memory():
                 sig["r2"][arm] = zeros.clone()
                 state = (cue, cue)
             elif arm == "no_ca3":
-                sig["r1"][arm] = bh.cosine_rows(
-                    codes, self.ca1.reinstate(self.ca1.plateaus(codes)))
+                pl = self.shared.test_plateaus
+                if pl is None or pl.shape[0] != codes.shape[0]:
+                    pl = self.ca1.plateaus(codes)
+                sig["r1"][arm] = bh.cosine_rows(codes, self.ca1.reinstate(pl))
                 sig["r2"][arm] = zeros.clone()
                 state = None
             elif arm == "vc_baseline":
@@ -531,6 +550,7 @@ def run_list(codes, lst, seed, baseline, arms, cfg, close=None):
     out = {"signal": {r: {} for r in READOUTS}, "ca3": {}, "types": types.tolist(),
            "paired": paired.tolist(), "level": level.tolist()}
     shared = Study(study, seed, cfg)
+    shared.share_plateaus(test, baseline, cfg, seed)
     groups = ([(None, [a for a in arms if a in SHARED_ARMS])]
               if any(a in SHARED_ARMS for a in arms) else [])
     groups += [(a, [a]) for a in arms if a in STUDY_ARMS]

@@ -350,3 +350,20 @@ def test_scoring_a_record_with_both_readouts_and_lure_sets():
     drawer = tb.score_record(rec, cal, "r1", "drawer")
     assert drawer["intact"]["rates lure similar"]["mean"] == pytest.approx(1.0)
     assert drawer["intact"]["ca3 lure_exact"]["mean"] == pytest.approx(0.5)
+
+
+def test_plateaus_shared_for_study_and_test_codes_match_ca1s_own():
+    dim, seed = 500, 3
+    cfg = rc.scaled_model(8000)
+    study = sparse_codes(6, dim, 40, seed=1)
+    test = sparse_codes(9, dim, 40, seed=2)
+    shared = rc.Study(study, seed, cfg)
+    shared.share_plateaus(test, torch.zeros(dim), cfg, seed)
+    ca1 = rc.CA1Sparse(cfg["ca3_units"], dim, cfg["ca1_units"], cfg["ca1_plateau_share"],
+                       cfg["ca1_connect"], cfg["ca1_gate"], seed=seed, ec3_baseline=torch.zeros(dim))
+    assert torch.equal(shared.plateaus, ca1.plateaus(study))
+    assert torch.equal(shared.test_plateaus, ca1.plateaus(test))
+    mem = rc.Memory(study, seed, torch.zeros(dim), cfg, shared)
+    sig, _ = mem.recall(test, ["no_ca3"])
+    expect = bh.cosine_rows(test, mem.ca1.reinstate(ca1.plateaus(test)))
+    assert torch.allclose(sig["r1"]["no_ca3"], expect)

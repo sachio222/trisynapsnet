@@ -53,8 +53,8 @@ seeds_for() {
         background:*) echo 5;;
         *:225:*|*:1000:*) echo 10;;
         *:4000:*) echo 5;;
-        # 1% and log-scaled ran after the memory stop, with 3 seeds to
-        # bound run time.
+        # 1% and log-scaled: 3 seeds, planned after the memory stop; the
+        # reported runs stopped short of that (docs/e1d_protocol.md, 14b).
         *:16000:1|*:16000:log) echo 3;;
         *:16000:*) echo 5;;
     esac

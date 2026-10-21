@@ -11,7 +11,8 @@
 # Phase D: E1c's end-to-end load runs, 20 to 200 drawings, 5 seeds, 2%.
 # Phase E: Lake's runs and the instance task at 4.4%, 10 seeds, the check.
 #
-# Usage: WIL="..." COV="..." scripts/run_e3.sh [A|B|C|D|E]
+# Usage: WIL="..." COV="..." scripts/run_e3.sh [A|B|C|D|E|status]
+#   status lists every E3 result file with its finished seeds and what remains.
 #   PYTHON=/path/to/python picks the interpreter; JOBS=2 runs two at once.
 #   WIL and COV hold the chosen settings as harness flags, e.g.
 #   WIL="--wil-presynaptic above-mean --wil-emax 0.2" COV="--cov-normalise".
@@ -54,6 +55,23 @@ need_settings() {
 }
 
 case $PHASE in
+status)
+    "$PY" - <<'PYEOF'
+import json, pathlib
+plan = {"A": [("e3_grid_classification_background_225_5", 5), ("e3_grid_instance_background_225_5", 5)],
+        "B": [("e3_classification_background_225_5", 5), ("e3_instance_background_225_5", 5)],
+        "C": [("e3_classification_official_225_5", 10), ("e3_instance_official_225_5", 10)],
+        "D": [("e3_load_official_n{}_225_5".format(n), 5) for n in (20, 50, 100, 200)],
+        "E": [("e3_classification_official_225_10", 10), ("e3_instance_official_225_10", 10)]}
+for phase, files in plan.items():
+    for name, want in files:
+        path = pathlib.Path("results") / (name + ".json")
+        done = json.loads(path.read_text())["seeds_done"] if path.is_file() else []
+        left = [s for s in range(want) if s not in done]
+        print("{} {:<45} done {:>2}/{:<2} remaining seeds {}".format(
+            phase, name, len(done), want, left if left else "none"))
+PYEOF
+    ;;
 A)
     {
         echo "e3_grid_classification_background_225_5 --grid --task classification --runs background --seeds 5"

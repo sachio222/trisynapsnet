@@ -269,7 +269,9 @@ def dump(k=5):
                 for stage in ("ca3", "ca1"):
                     out += ["", "{} {}".format(stage, d), "", level_table(rec, stage, d)]
             out += ["", "Settling effect, CA3, test-to-study", "", effect_table(rec), "",
-                    "Settling effect, CA3, study-to-test", "", effect_table(rec, "ca3", "study-to-test")]
+                    "Settling effect, CA3, study-to-test", "", effect_table(rec, "ca3", "study-to-test"),
+                    "", "Settling effect, CA1, test-to-study", "", effect_table(rec, "ca1"),
+                    "", "Settling effect, CA1, study-to-test", "", effect_table(rec, "ca1", "study-to-test")]
             for i, lv in enumerate(rec["levels"]):
                 out += ["", "Cue quality, " + level_label(lv), "", cue_table(rec, i)]
             out += ["", "CA1 gap {}".format(ca1_gap(rec)), ""]

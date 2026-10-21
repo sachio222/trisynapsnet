@@ -162,6 +162,16 @@ def recorded_args(args):
     return recorded
 
 
+def recorded_args(args):
+    """The arguments as the result file records them, with every path
+    made portable (see omniglot.portable)."""
+    recorded = dict(vars(args))
+    for key in ("checkpoint", "data_dir", "eval_data_dir", "out"):
+        if recorded.get(key) is not None:
+            recorded[key] = omniglot.portable(recorded[key])
+    return recorded
+
+
 def default_out(args):
     """E1's name for a clean classification run, E1b's name otherwise."""
     kind, _ = corruption_levels(args)

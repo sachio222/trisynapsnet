@@ -153,6 +153,50 @@ The ideal lookup identifies the right memory for almost every damaged cue tested
 
 Every number is in `results/e1c.md`, and the figures are `figures/e1c_*.pdf`.
 
+## E1d: sparser codes
+
+E1c ran DG and CA3 with 4.4% of their cells active, AHA's share, at every size, and found that the number of patterns CA3 holds per cell falls as the network grows. Theory for sparse associative memories expects that when the share of active cells stays fixed. It expects capacity per cell to hold or grow only when the number of active cells, k, grows about with the logarithm of the cell count, n. In rat dentate gyrus about 2% of granule cells are active; no human measurement exists. E1d asks whether CA3's capacity per cell stops falling with size once codes are that sparse.
+
+E1d reruns E1c's test of CA3 on its own with four shares of active cells in DG and CA3: 4.4%, 2%, 1%, and a log-scaled code, k = round(2.007 × log2 n), which puts 20 cells on at 1,000 cells (2%), 24 at 4,000 and 28 at 16,000. At 225 cells, 2% rounds to 5 active cells, 1% is raised to the floor of 3, and the log-scaled code has 16, denser than AHA's 10. CA3 runs at 225, 1,000 and 4,000 cells with random patterns and with DG's patterns for drawings, and at 16,000 cells with random patterns. Loads climb a grid, each a factor of at most 5/3 above the last, until exact recall falls below 5%. The **50% load** is the load where exact recall falls through 50%, read between the two tested loads around it; over n it gives the **load per cell**. Damage, cues, rules and scoring are E1c's. At 4.4% the runs store E1c's own random patterns and give E1c's 50% loads, except where the finer grid reads one more closely (388 against 327 for the pseudo-inverse rule at 1,000 cells). A second test reruns E1's and E1b's full-model runs at 225 cells with 5 active. Every choice is in `docs/e1d_protocol.md`.
+
+The predictions, written before the runs:
+
+1. Capacity per cell rises as codes get sparser, at every size.
+2. With log-scaled codes, capacity per cell holds or grows with size, instead of falling as in E1c.
+3. Clipped binary synapses gain the most from sparser codes; at the sparsest codes they beat the covariance rule.
+4. DG's codes for drawings stay more uneven than random patterns at every sparsity, so drawings stay below random patterns in capacity.
+5. One-shot classification and instance accuracy change by less than 3 points, since PR, not CA3, sets them.
+
+### E1d results
+
+With the log-scaled code, capacity per cell grows with size for both local rules, and nearly triples with every fourfold rise in cells beyond 1,000. At any fixed share it still falls. Load per cell at 50% exact recall from clean cues, random patterns:
+
+| Share active | Rule | 225 cells | 1,000 cells | 4,000 cells | 16,000 cells |
+|---|---|---|---|---|---|
+| 4.4% | Covariance | 1.12 | 0.79 | 0.60 | 0.49 |
+| 4.4% | Clipped binary | 1.25 | 0.78 | 0.31 | 0.11 |
+| 2% | Covariance | 1.93 | 1.82 | 1.41 | 1.08 |
+| 2% | Clipped binary | 2.00 | 2.37 | 1.01 | 0.51 |
+| 1% | Covariance | 2.80 | 3.61 | 2.97 | not run |
+| 1% | Clipped binary | 1.43 | 4.79 | 3.13 | not run |
+| Log-scaled | Covariance | 0.70 | 1.82 | 5.14 | 14.6 |
+| Log-scaled | Clipped binary | 0.73 | 2.37 | 6.36 | 23.5 |
+
+At 16,000 cells the log-scaled code holds 232,927 patterns with the covariance rule and 376,462 with clipped binary synapses, against 7,813 and 1,727 at 4.4%. Those two runs have one seed each; elsewhere the 50% loads of single seeds lie within 6% of their mean.
+
+- **Prediction 1 held for the covariance rule and partly failed for the other two.** The covariance rule gains at every size from 4.4% to 2% to 1%: from 0.60 to 1.41 to 2.97 per cell at 4,000 cells. Clipped binary synapses gain at 1,000 cells and above, but at 225 cells 3 active cells hold fewer patterns than 5 (1.43 against 2.00 per cell). The pseudo-inverse rule, scored from cues missing 40% of their cells, barely moves at 225 and 1,000 cells (0.46 to 0.51 per cell) and gains modestly at 4,000 (0.38 to 0.44) and 16,000 cells (0.24 at 4.4%, 0.34 at 2%, 0.40 at 1%).
+- **Prediction 2 held for the local rules.** Covariance goes 0.70, 1.82, 5.14, 14.6 per cell from 225 to 16,000 cells, and clipped binary synapses 0.73, 2.37, 6.36, 23.5. The pseudo-inverse rule stays flat at 0.51, 0.44 and 0.44 up to 4,000 cells. Fixed shares keep falling: at 2%, covariance drops from 1.93 to 1.08 per cell and clipped binary synapses from 2.37 at 1,000 cells to 0.51 at 16,000.
+- **Prediction 3 held from 1,000 cells up and failed at 225.** From 4.4% to 1% at 4,000 cells, clipped binary synapses gain tenfold (0.31 to 3.13) and the covariance rule fivefold (0.60 to 2.97). At the sparsest codes clipped binary synapses lead: 6.36 against 5.14 per cell at 4,000 cells with the log-scaled code, 23.5 against 14.6 at 16,000, and 4.79 against 3.61 at 1% of 1,000. At 225 cells with 3 active cells they fall well behind (1.43 against 2.80), and from a cue missing 40% of its cells they recall only 69% of 20 stored patterns exactly.
+- **Prediction 4 held for the local rules.** DG's cell use on evaluation-alphabet drawings is 2.2 to 3.2 times as uneven as random patterns at every share and size, measured as the spread over the mean of how many stored drawings each cell joins. Wherever a drawing run fell below 50% exact recall within the 659 characters available, it held fewer patterns than random ones: 380 against 2,386 for covariance at 4.4% of 4,000 cells, 313 against 449 for clipped binary synapses at 2% of 225. Many sparse runs on drawings never fell below 50%, so there the comparison stays open. The pseudo-inverse rule holds about as many drawings as random patterns (106 against 111 at 225 cells).
+- **Prediction 5 partly failed.** At 2%, the settling rules' CA3 accuracy on Lake's runs rose by 3.1 to 3.5 points, just past the 3-point bound, in both matching directions: covariance from 53.8% to 57.2% matched study-to-test, and from 62.7% to 65.9% test-to-study. PR rose less, from 70.6% to 72.5% study-to-test. On the instance task under occlusion and noise up to 0.5 the settling rules moved by 1.5 points or less. Passing PR's k most active cells on without settling lost up to 10.6 points matched study-to-test (58.3% to 47.8% at noise 0.3), because 5 cells carry less than 10, but matched test-to-study it stayed within 0.8 points on the instance task and gained 3.1 on Lake's runs. On the background-alphabet validation runs, classification moved the other way, by -1.2 and -1.5 points.
+
+These results also stood out:
+
+- **The pseudo-inverse rule at 16,000 cells misses cells it never updates.** At 4.4% only 65% of cues missing 40% of their cells come back exactly, even with 20 patterns stored. Each of its 70 steps updates 1,422 random cells of 16,000, so a cell goes unvisited with probability 0.15%, and a cue needing 284 cells switched back on keeps at least one unchanged in about 35% of cases. Sparser codes need fewer cells switched on, which explains part of that rule's gain at 16,000 cells.
+- **The pseudo-inverse rule at 16,000 cells did not finish.** Each load needs the pseudo-inverse of a load-by-16,000 matrix, and with two such runs at once the machine ran out of memory. Its 2% and 1% values use 4 and 2 seeds; the log-scaled code was not run. A later attempt at the remaining local-rule runs at 16,000 cells stopped on swap growth, so the 1% runs there are missing.
+
+Summed over runs, with up to three running at once on one machine, the CA3 runs took 8.7 hours, 6.8 of them at 16,000 cells (about 21 minutes per seed for the log-scaled code), and the full-model runs 2.7 hours. Every number is in `results/e1d.md`, and the figures are `figures/e1d_*.pdf`.
+
 ## E4: one-shot learning in CA1
 
 CA1 is the hippocampal field after CA3. In the brain it sends the memory back to entorhinal cortex (EC), the cortex that feeds the hippocampus. In AHA, the part called PM plays CA1: a small network trained by backpropagation, 60 optimiser steps over the study set, to rebuild a drawing's pixels from its stored CA3 pattern, a procedure with no known counterpart in the brain. E1c also found that PM's error from the exact stored pattern rises from 0.0046 at 20 drawings to 0.0363 at 100, which looked like a limit on how many drawings CA1 can hold.
@@ -269,6 +313,23 @@ The whole experiment, then `results/e1c.md` and the figures:
 PYTHON=.venv/bin/python scripts/run_e1c.sh
 ```
 
+## Run E1d
+
+CA3 on its own at one share of active cells, one rule and size, climbing the load grid:
+
+```
+python -m trisynapsnet.eval.sparsecodes --source random --units 4000 --sparsity log --rule willshaw --seeds 5
+python -m trisynapsnet.eval.sparsecodes --source drawings --split evaluation --units 1000 --sparsity 2 --rule covariance
+```
+
+`--sparsity` takes 4.4, 2, 1 or log. A partial result file resumes from its last finished seed. The whole experiment, then `results/e1d.md` and the figures:
+
+```
+PYTHON=.venv/bin/python JOBS=2 scripts/run_e1d.sh
+```
+
+Run phase C, 16,000 cells, with `JOBS=1`: each process holds two 16,000 by 16,000 matrices. When aha4 does not sit next to this repo, as in a git worktree, set `TSN_AHA4` to its folder.
+
 ## Run E4
 
 CA1 on its own, every CA1 arm, one CA1 size:
@@ -305,9 +366,10 @@ trisynapsnet/eval/oneshot.py    one-shot scoring and diagnostics
 trisynapsnet/eval/evaluate.py   command line for one setting
 trisynapsnet/eval/ca3space.py   E1c: CA3 on its own, cued with damaged patterns
 trisynapsnet/eval/endtoend.py   E1c: the full model studying many drawings at once
+trisynapsnet/eval/sparsecodes.py  E1d: E1c's CA3 test at sparser codes and larger loads
 trisynapsnet/eval/ca1space.py   E4: CA1 on its own, returning EC codes against load
-scripts/                        E1, E1b, E1c and E4 drivers, table and figure builders
-docs/                           E1b's, E1c's and E4's protocols
+scripts/                        E1 to E1d and E4 drivers, table and figure builders
+docs/                           E1b's, E1c's, E1d's and E4's protocols
 ```
 
 Code adapted from aha4 says so at the top of each file.

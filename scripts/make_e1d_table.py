@@ -346,7 +346,7 @@ def e2e_table(runs, match, results_dir=RESULTS):
         "|---|---|" + "---|" * len(E2E_OPTIONS)]
     found = False
     for task, kind, level in tasks:
-        row = [task.capitalize(), "none" if kind == "none" or level == 0 else "{} {:g}".format(kind, level)]
+        row = [task.capitalize(), "none" if kind == "none" else "{} {:g}".format(kind, level)]
         for rule, suffix in E2E_OPTIONS:
             old, new = e2e_paths(task, runs, rule, suffix, kind, match, results_dir)
             a, b = e2e_value(old, level), e2e_value(new, level)

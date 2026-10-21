@@ -6,6 +6,7 @@ next to it (../aha4/...), so no file holds a path from one machine.
 
 import importlib
 import json
+import os
 
 from trisynapsnet.data import omniglot
 from trisynapsnet.eval import evaluate
@@ -21,6 +22,7 @@ def test_portable_paths_are_relative_to_the_repo():
 
 
 def test_aha4_can_live_anywhere(tmp_path, monkeypatch):
+    before = os.environ.get("TSN_AHA4"), omniglot.DEFAULT_CHECKPOINT
     elsewhere = tmp_path / "somewhere" / "aha4"
     monkeypatch.setenv("TSN_AHA4", str(elsewhere))
     moved = importlib.reload(omniglot)
@@ -32,8 +34,11 @@ def test_aha4_can_live_anywhere(tmp_path, monkeypatch):
             "../aha4/checkpoints/vc_pretrained.pth.tar"
         assert moved.portable(elsewhere / "data" / "omniglot-runs") == "../aha4/data/omniglot-runs"
     finally:
-        monkeypatch.delenv("TSN_AHA4")
+        # Put TSN_AHA4 back as it was, set or not, before reloading.
+        monkeypatch.undo()
         importlib.reload(omniglot)
+    # Later tests still find aha4 where the environment put it.
+    assert (os.environ.get("TSN_AHA4"), omniglot.DEFAULT_CHECKPOINT) == before
 
 
 def test_evaluate_records_no_absolute_paths(tmp_path):

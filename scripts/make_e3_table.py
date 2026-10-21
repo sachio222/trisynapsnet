@@ -282,12 +282,13 @@ def main(argv=None):
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     p.add_argument("--select", action="store_true")
     p.add_argument("--dump", action="store_true", help="print every table whose files exist")
+    p.add_argument("--k", type=int, default=5, help="active cells of the files --dump reads")
     args = p.parse_args(argv)
     if args.select:
         select()
         return
     if args.dump:
-        print(dump())
+        print(dump(args.k))
         return
     raise SystemExit("Tables come after the runs.")
 

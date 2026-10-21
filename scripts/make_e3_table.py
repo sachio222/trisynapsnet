@@ -95,14 +95,196 @@ def select():
     return chosen
 
 
+ARM_NAMES = {
+    "pr_none": "PR, no settling",
+    "pr_cov": "PR, covariance CA3",
+    "pr_wil": "PR, clipped binary CA3",
+    "pp_cov_none": "Perforant, covariance, no settling",
+    "pp_cov": "Perforant, covariance, settling",
+    "pp_wil_none": "Perforant, clipped binary, no settling",
+    "pp_wil": "Perforant, clipped binary, settling",
+}
+SHORT = {"study-to-test": "S→T", "test-to-study": "T→S"}
+PAIRS = (("pp_cov", "pp_cov_none"), ("pp_wil", "pp_wil_none"), ("pr_cov", "pr_none"),
+         ("pr_wil", "pr_none"))
+
+
+def pct(store, key):
+    v = store[key]
+    m = statistics.mean(v)
+    sd = statistics.stdev(v) if len(v) > 1 else 0.0
+    return "{:.1f} ± {:.1f}".format(100 * m, 100 * sd)
+
+
+def level_label(lv):
+    return "clean" if lv["kind"] == "none" else "{} {:g}".format(lv["kind"], lv["level"])
+
+
+def seeds_note(rec):
+    n = len(rec["seeds_done"])
+    return "{} seeds{}".format(n, "" if rec["complete"] else ", unfinished")
+
+
+def stage_table(rec, level=0, arms=tuple(ARM_NAMES)):
+    """Every arm at every stage, both directions, one level."""
+    store = rec["per_seed"][level]
+    cols = [(st, d) for st in ("ca3", "ca1", "pm") for d in DIRECTIONS]
+    head = ["Arm"] + ["{} {}".format({"ca3": "CA3", "ca1": "CA1", "pm": "PM"}[st], SHORT[d])
+                      for st, d in cols]
+    lines = ["| " + " | ".join(head) + " |", "|" + "---|" * len(head)]
+    for d_ref in (("vc", "Vision code alone"), ("pr", "PR output, before CA3")):
+        row = [d_ref[1]] + ["" for _ in cols]
+        for i, (st, d) in enumerate(cols):
+            if st == "ca3":
+                row[i + 1] = pct(store, "{} {}".format(d_ref[0], d))
+        lines.append("| " + " | ".join(row) + " |")
+    for arm in arms:
+        row = [ARM_NAMES[arm]] + [pct(store, "{} {} {}".format(arm, st, d)) for st, d in cols]
+        lines.append("| " + " | ".join(row) + " |")
+    return "\n".join(lines)
+
+
+def level_table(rec, stage, direction, arms=tuple(ARM_NAMES)):
+    """Every arm at every level, one stage and direction."""
+    labels = [level_label(lv) for lv in rec["levels"]]
+    lines = ["| Arm | " + " | ".join(labels) + " |", "|" + "---|" * (1 + len(labels))]
+    for arm in arms:
+        row = [ARM_NAMES[arm]] + [pct(store, "{} {} {}".format(arm, stage, direction))
+                                  for store in rec["per_seed"]]
+        lines.append("| " + " | ".join(row) + " |")
+    return "\n".join(lines)
+
+
+def effect_table(rec, stage="ca3", direction="test-to-study"):
+    """Settling minus no settling, per seed: mean, range, seeds where it helps."""
+    labels = [level_label(lv) for lv in rec["levels"]]
+    lines = ["| Pair | " + " | ".join(labels) + " |", "|" + "---|" * (1 + len(labels))]
+    for a, b in PAIRS:
+        row = ["{} minus no settling".format(ARM_NAMES[a])]
+        for store in rec["per_seed"]:
+            diffs = [100 * (x - y) for x, y in zip(store["{} {} {}".format(a, stage, direction)],
+                                                  store["{} {} {}".format(b, stage, direction)])]
+            row.append("{:+.1f} [{:+.1f}, {:+.1f}] {}/{}".format(
+                statistics.mean(diffs), min(diffs), max(diffs), sum(x > 0 for x in diffs),
+                len(diffs)))
+        lines.append("| " + " | ".join(row) + " |")
+    return "\n".join(lines)
+
+
+def cue_table(rec, level=0, arms=tuple(ARM_NAMES)):
+    """Cue and final-state quality against the right stored pattern."""
+    store = rec["per_seed"][level]
+    metrics = (("active_cue", "Cells in cue", 1), ("overlap_cue", "Right cells in cue", 100),
+               ("stray_cue", "Stray cells in cue", 100), ("ident_cue", "Lookup from cue", 100),
+               ("overlap_final", "Right cells, final", 100),
+               ("stray_final", "Stray cells, final", 100), ("exact", "Exact recall", 100))
+    lines = ["| Arm | " + " | ".join(m[1] for m in metrics) + " |",
+             "|" + "---|" * (1 + len(metrics))]
+    for arm in arms:
+        row = [ARM_NAMES[arm]]
+        for key, _, scale in metrics:
+            v = statistics.mean(store["{} {}".format(arm, key)])
+            row.append("{:.2f}".format(v) if scale == 1 else "{:.1f}".format(scale * v))
+        lines.append("| " + " | ".join(row) + " |")
+    return "\n".join(lines)
+
+
+def load_table(records, stage, direction, arms, kind):
+    """One row per load and arm, columns the clean level and one corruption kind."""
+    first = next(r for r in records.values() if r)
+    idx = [i for i, lv in enumerate(first["levels"]) if lv["kind"] in ("none", kind)]
+    labels = [level_label(first["levels"][i]) for i in idx]
+    lines = ["| Load | Arm | " + " | ".join(labels) + " |", "|" + "---|" * (2 + len(labels))]
+    for load_n, rec in records.items():
+        if rec is None:
+            lines.append("| {} | not run | ".format(load_n) + " | ".join("" for _ in labels) + " |")
+            continue
+        for arm in arms:
+            row = [str(load_n), ARM_NAMES[arm]] + [
+                pct(rec["per_seed"][i], "{} {} {}".format(arm, stage, direction)) for i in idx]
+            lines.append("| " + " | ".join(row) + " |")
+    return "\n".join(lines)
+
+
+def load_metric_table(records, metric, arms, kind):
+    first = next(r for r in records.values() if r)
+    idx = [i for i, lv in enumerate(first["levels"]) if lv["kind"] in ("none", kind)]
+    labels = [level_label(first["levels"][i]) for i in idx]
+    lines = ["| Load | Arm | " + " | ".join(labels) + " |", "|" + "---|" * (2 + len(labels))]
+    for load_n, rec in records.items():
+        if rec is None:
+            continue
+        for arm in arms:
+            row = [str(load_n), ARM_NAMES[arm]] + [
+                "{:.1f}".format(100 * statistics.mean(rec["per_seed"][i]["{} {}".format(arm, metric)]))
+                for i in idx]
+            lines.append("| " + " | ".join(row) + " |")
+    return "\n".join(lines)
+
+
+def ca1_gap(rec):
+    """Largest |CA1 - CA3| over arms, levels and directions, in points."""
+    worst = (0.0, None)
+    for lv, store in zip(rec["levels"], rec["per_seed"]):
+        for arm in ARM_NAMES:
+            for d in DIRECTIONS:
+                g = 100 * (statistics.mean(store["{} ca1 {}".format(arm, d)])
+                           - statistics.mean(store["{} ca3 {}".format(arm, d)]))
+                if abs(g) > abs(worst[0]):
+                    worst = (g, (level_label(lv), arm, d))
+    return worst
+
+
+def hours(names):
+    total = sum(load(n)["seconds"] for n in names if load(n))
+    return total / 3600
+
+
 def main(argv=None):
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     p.add_argument("--select", action="store_true")
+    p.add_argument("--dump", action="store_true", help="print every table whose files exist")
     args = p.parse_args(argv)
     if args.select:
         select()
         return
+    if args.dump:
+        print(dump())
+        return
     raise SystemExit("Tables come after the runs.")
+
+
+def dump(k=5):
+    """Every table whose result files exist, for reading during the runs."""
+    out = []
+    for runs in ("background", "official"):
+        rec = load("e3_classification_{}_225_{}".format(runs, k))
+        if rec:
+            out += ["## Classification, {} runs ({})".format(runs, seeds_note(rec)), "",
+                    stage_table(rec), "", cue_table(rec), ""]
+        rec = load("e3_instance_{}_225_{}".format(runs, k))
+        if rec:
+            out += ["## Instance, {} ({})".format(runs, seeds_note(rec))]
+            for d in DIRECTIONS:
+                for stage in ("ca3", "ca1"):
+                    out += ["", "{} {}".format(stage, d), "", level_table(rec, stage, d)]
+            out += ["", "Settling effect, CA3, test-to-study", "", effect_table(rec), "",
+                    "Settling effect, CA3, study-to-test", "", effect_table(rec, "ca3", "study-to-test")]
+            for i, lv in enumerate(rec["levels"]):
+                out += ["", "Cue quality, " + level_label(lv), "", cue_table(rec, i)]
+            out += ["", "CA1 gap {}".format(ca1_gap(rec)), ""]
+    loads = {n: load("e3_load_official_n{}_225_{}".format(n, k)) for n in (20, 50, 100, 200)}
+    if any(loads.values()):
+        arms = ("pr_none", "pr_cov", "pp_cov_none", "pp_cov", "pp_wil_none", "pp_wil")
+        for kind in ("occlusion", "noise"):
+            for d in DIRECTIONS:
+                out += ["## Load, CA3, {} {}".format(kind, d), "",
+                        load_table(loads, "ca3", d, arms, kind), ""]
+            out += ["## Load, exact recall, {}".format(kind), "",
+                    load_metric_table(loads, "exact", arms, kind), "",
+                    "## Load, right cells in cue, {}".format(kind), "",
+                    load_metric_table(loads, "overlap_cue", arms, kind), ""]
+    return "\n".join(out)
 
 
 if __name__ == "__main__":

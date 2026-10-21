@@ -195,7 +195,7 @@ Three more results stood out:
 - **BTSP gains most from a larger CA3.** At 1,000 CA3 cells with 44 active, BTSP with 9,412 CA1 cells identifies 99.3% at 200 drawings and 39.7% at 500. The network without the L2 penalty identifies 3.7% and 0.2%.
 - **The rat-sized CA1 struggles with alike drawings.** On the instance task, where all 20 drawings show one character, 375-cell BTSP falls up to 7.1 points below CA3, with only 4 plateau cells per drawing. At 2,118 cells it stays within 1.4 points.
 
-BTSP stores 20 drawings in about 1 second on the CPU, one presentation each; the backpropagation networks take about 2.3 seconds for their 60 steps. Every number is in `results/e4.md`, and the figures are `figures/e4_identification.pdf` and `figures/e4_partial.pdf`.
+BTSP stores 20 drawings in about 1 second on the CPU, one presentation each, against about 2.3 seconds for the backpropagation networks' 60 steps. At 500 drawings the 2,118-cell BTSP CA1 takes 10.1 seconds against 8.2, so one presentation is not always faster in wall time. Every number is in `results/e4.md`, and the figures are `figures/e4_identification.pdf` and `figures/e4_partial.pdf`.
 
 ## Install
 

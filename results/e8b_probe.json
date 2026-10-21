@@ -1,0 +1,129 @@
+{
+ "experiment": "e8b probe",
+ "load": 256,
+ "threads": 2,
+ "machine": "macOS-27.0-arm64-arm-64bit",
+ "torch": "2.14.0",
+ "runs": [
+  {
+   "denominator": 2000,
+   "config": {
+    "denominator": 2000,
+    "dg_units": 7500,
+    "dg_k": 150,
+    "ca3_units": 850,
+    "ca3_k": 17,
+    "ca1_units": 8000,
+    "mossy_in_degree": 280,
+    "dg_gamma": 0.95,
+    "dg_knockout": 0.25,
+    "ca3_iters": 70,
+    "pp_presynaptic": "positive",
+    "pp_normalise": true,
+    "pp_emax": 0.3,
+    "ca1_plateau_share": 0.005,
+    "ca1_connect": 0.6,
+    "ca1_gate": 0.5
+   },
+   "load": 256,
+   "seconds": 17.753659963607788,
+   "peak_rss_gb": 1.636794368
+  },
+  {
+   "denominator": 1000,
+   "config": {
+    "denominator": 1000,
+    "dg_units": 15000,
+    "dg_k": 300,
+    "ca3_units": 1700,
+    "ca3_k": 34,
+    "ca1_units": 16000,
+    "mossy_in_degree": 280,
+    "dg_gamma": 0.95,
+    "dg_knockout": 0.25,
+    "ca3_iters": 70,
+    "pp_presynaptic": "positive",
+    "pp_normalise": true,
+    "pp_emax": 0.3,
+    "ca1_plateau_share": 0.005,
+    "ca1_connect": 0.6,
+    "ca1_gate": 0.5
+   },
+   "load": 256,
+   "seconds": 33.07234311103821,
+   "peak_rss_gb": 2.078769152
+  },
+  {
+   "denominator": 750,
+   "config": {
+    "denominator": 750,
+    "dg_units": 20000,
+    "dg_k": 400,
+    "ca3_units": 2267,
+    "ca3_k": 45,
+    "ca1_units": 21333,
+    "mossy_in_degree": 280,
+    "dg_gamma": 0.95,
+    "dg_knockout": 0.25,
+    "ca3_iters": 70,
+    "pp_presynaptic": "positive",
+    "pp_normalise": true,
+    "pp_emax": 0.3,
+    "ca1_plateau_share": 0.005,
+    "ca1_connect": 0.6,
+    "ca1_gate": 0.5
+   },
+   "load": 256,
+   "seconds": 44.30060005187988,
+   "peak_rss_gb": 2.522529792
+  },
+  {
+   "denominator": 500,
+   "config": {
+    "denominator": 500,
+    "dg_units": 30000,
+    "dg_k": 600,
+    "ca3_units": 3400,
+    "ca3_k": 68,
+    "ca1_units": 32000,
+    "mossy_in_degree": 280,
+    "dg_gamma": 0.95,
+    "dg_knockout": 0.25,
+    "ca3_iters": 70,
+    "pp_presynaptic": "positive",
+    "pp_normalise": true,
+    "pp_emax": 0.3,
+    "ca1_plateau_share": 0.005,
+    "ca1_connect": 0.6,
+    "ca1_gate": 0.5
+   },
+   "load": 256,
+   "seconds": 67.33670806884766,
+   "peak_rss_gb": 3.52878592
+  },
+  {
+   "denominator": 400,
+   "config": {
+    "denominator": 400,
+    "dg_units": 37500,
+    "dg_k": 750,
+    "ca3_units": 4250,
+    "ca3_k": 85,
+    "ca1_units": 40000,
+    "mossy_in_degree": 280,
+    "dg_gamma": 0.95,
+    "dg_knockout": 0.25,
+    "ca3_iters": 70,
+    "pp_presynaptic": "positive",
+    "pp_normalise": true,
+    "pp_emax": 0.3,
+    "ca1_plateau_share": 0.005,
+    "ca1_connect": 0.6,
+    "ca1_gate": 0.5
+   },
+   "load": 256,
+   "seconds": 73.02291798591614,
+   "peak_rss_gb": 4.483629056
+  }
+ ]
+}

@@ -98,6 +98,16 @@ def test_ec3_drive_is_a_fixed_positive_projection():
     assert P.min() >= 0 and P.max() < 1
 
 
+def test_ec3_baseline_is_subtracted_before_the_projection():
+    E = torch.rand(6, 50)
+    base = torch.rand(50)
+    plain = modules.CA1BTSP(10, 50, 40, plateau_share=0.1, seed=3)
+    centred = modules.CA1BTSP(10, 50, 40, plateau_share=0.1, seed=3, ec3_baseline=base)
+    assert torch.allclose(centred.drive(E), plain.drive(E - base), atol=1e-5)
+    # Same projection: the baseline only shifts each cell by its own mean drive.
+    assert torch.allclose(centred.drive(E), plain.drive(E) - plain.drive(base[None]), atol=1e-4)
+
+
 def test_random_plateaus_ignore_the_ec_code():
     ca1 = modules.CA1BTSP(10, 50, 40, plateau_share=0.1, seed=3, plateau_source="random")
     E = torch.rand(6, 50)
@@ -168,12 +178,12 @@ def test_free_parameters_are_counted():
     assert len(names) == len(set(names))
     chosen = [p["name"] for p in params if p["source"] == "chosen"]
     taken = [p["name"] for p in params if p["source"] == "taken"]
-    assert chosen == ["plateau_share"]
+    assert chosen == ["plateau_share", "ec3_baseline"]
     assert set(taken) == {"connect", "gate", "initial_weight", "ca1_units"}
     for p in params:
         assert p["source"] in ("chosen", "taken", "structural")
         assert p["why"]
-    assert len(params) == 9
+    assert len(params) == 10
 
 
 def test_backprop_baseline_returns_ec_codes():

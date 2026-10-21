@@ -613,6 +613,10 @@ def btsp_parameters():
         {"name": "plateau_share", "source": "chosen",
          "why": "share of CA1 cells that get a plateau for each drawing (f_q in Wu and Maass "
                 "2025, measured near 0.005); chosen on background-alphabet drawings"},
+        {"name": "ec3_baseline", "source": "chosen",
+         "why": "a yes-or-no choice: plateau drive measured against each cell's drive from the "
+                "mean background-alphabet EC code (yes) or raw (no); chosen on "
+                "background-alphabet drawings"},
         {"name": "connect", "source": "taken",
          "why": "probability that a CA3 cell synapses on a CA1 cell, 0.6 (f_w in Wu and Maass "
                 "2025, from about 15,000 inputs of 25,000)"},
@@ -662,7 +666,12 @@ class CA1BTSP():
     The plateaus. Each drawing's EC code drives every CA1 cell through a
     fixed random projection with positive weights (the instructive EC3
     signal), and the m most driven cells plateau, m = plateau_share x units.
-    Picking the top m stands in for a plateau threshold.
+    Picking the top m stands in for a plateau threshold. With ec3_baseline,
+    the mean EC code of past drawings, each cell's drive is taken relative
+    to its drive from that mean: a stand-in for feedforward inhibition that
+    rises with the EC input a cell usually gets. Without it, the few cells
+    whose random weights best match the features common to all drawings
+    plateau for most drawings (E4 protocol).
 
     Recall. CA1 sums its CA3 input through the learned binary weights, and
     k-winners-take-all keeps the m most driven cells (ties broken at
@@ -682,10 +691,11 @@ class CA1BTSP():
     """
 
     def __init__(self, n_in, ec_dim, units, plateau_share=0.005, connect=0.6, gate=0.5,
-                 seed=0, plateau_source="ec3"):
+                 seed=0, plateau_source="ec3", ec3_baseline=None):
         if plateau_source not in PLATEAU_SOURCES:
             raise ValueError("plateau_source must be one of {}".format(", ".join(PLATEAU_SOURCES)))
         self.plateau_source = plateau_source
+        self.ec3_baseline = None if ec3_baseline is None else ec3_baseline.detach().float().cpu().flatten()
         self.n_in, self.ec_dim, self.units = n_in, ec_dim, units
         self.plateau_share, self.connect, self.gate, self.seed = plateau_share, connect, gate, seed
         self.m = max(1, int(round(plateau_share * units)))
@@ -706,9 +716,12 @@ class CA1BTSP():
 
         The projection has weights uniform in [0, 1), fixed by the seed. It
         is made in blocks of CA1 cells and never kept, so a large CA1 costs
-        no memory.
+        no memory. With ec3_baseline set, each drive is P (e - baseline): every
+        cell's drive is measured against what the baseline code would give it.
         """
         E = E.detach().float().cpu()
+        if self.ec3_baseline is not None:
+            E = E - self.ec3_baseline
         out = torch.empty(E.shape[0], self.units)
         for start in range(0, self.units, block):
             stop = min(start + block, self.units)

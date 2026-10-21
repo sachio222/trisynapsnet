@@ -235,6 +235,23 @@ def ca1_gap(rec):
     return worst
 
 
+def gap_table(recs):
+    """CA1 minus CA3 for each arm: the largest gap over levels and directions."""
+    lines = ["| Arm | " + " | ".join(recs) + " |", "|" + "---|" * (1 + len(recs))]
+    for arm in ARM_NAMES:
+        row = [ARM_NAMES[arm]]
+        for rec in recs.values():
+            worst = 0.0
+            for store in rec["per_seed"]:
+                for d in DIRECTIONS:
+                    g = 100 * (statistics.mean(store["{} ca1 {}".format(arm, d)])
+                               - statistics.mean(store["{} ca3 {}".format(arm, d)]))
+                    worst = g if abs(g) > abs(worst) else worst
+            row.append("{:+.1f}".format(worst))
+        lines.append("| " + " | ".join(row) + " |")
+    return "\n".join(lines)
+
+
 def hours(names):
     total = sum(load(n)["seconds"] for n in names if load(n))
     return total / 3600
@@ -275,6 +292,11 @@ def dump(k=5):
             for i, lv in enumerate(rec["levels"]):
                 out += ["", "Cue quality, " + level_label(lv), "", cue_table(rec, i)]
             out += ["", "CA1 gap {}".format(ca1_gap(rec)), ""]
+    recs = {name: load(name) for name in ("e3_classification_official_225_{}".format(k),
+                                          "e3_instance_official_225_{}".format(k))}
+    recs = {n: r for n, r in recs.items() if r}
+    if recs:
+        out += ["## Largest CA1 minus CA3 gap per arm", "", gap_table(recs), ""]
     loads = {n: load("e3_load_official_n{}_225_{}".format(n, k)) for n in (20, 50, 100, 200)}
     if any(loads.values()):
         arms = ("pr_none", "pr_cov", "pp_cov_none", "pp_cov", "pp_wil_none", "pp_wil")

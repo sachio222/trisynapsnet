@@ -142,7 +142,10 @@ def evaluate_levels(aha, runs, levels, seeds, stages=STAGES, direction=DIRECTION
                 for stage in stages:
                     acc["accuracy"][stage].append(run_accuracy(
                         study[stage], recall[stage], run["labels"], direction, normalise))
-                acc["recall_loss"].append(recall_loss(recall["pm"], run["study"], run["labels"]))
+                # With E4's CA1 the "pm" stage is an EC code, so its loss is
+                # taken against the study drawings' EC codes.
+                target = run["study"] if recall["pm"].dim() == 4 else study["vc"]
+                acc["recall_loss"].append(recall_loss(recall["pm"], target, run["labels"]))
                 if diagnostics:
                     for name, value in run_diagnostics(aha, study, recall, run["labels"]).items():
                         acc["diagnostics"][name].append(value)

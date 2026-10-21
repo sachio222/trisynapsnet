@@ -249,3 +249,25 @@ def test_ec_ca1_leaves_ca3_and_pr_unchanged():
     for rule in ("btsp", "backprop_ec"):
         assert torch.equal(out[rule]["pr"], out["pm"]["pr"])
         assert torch.equal(out[rule]["pc"], out["pm"]["pc"])
+
+
+@pytest.mark.parametrize("rule", ["btsp", "backprop_ec"])
+def test_one_shot_runs_score_an_ec_ca1(rule):
+    """Lake's-run scoring must work when CA1 returns EC codes, not images.
+
+    Recall-loss then compares the returned code with the study drawing's EC
+    code, since there is no image to compare.
+    """
+    from trisynapsnet.eval import oneshot
+    g = torch.Generator().manual_seed(0)
+    runs = [{"study": (torch.rand(5, 1, 8, 8, generator=g) < 0.3).float(),
+             "labels": torch.randperm(5, generator=g)} for _ in range(2)]
+    for run in runs:
+        run["recall"] = run["study"][run["labels"]]
+    cfg = AHAConfig(image_size=8, ca3_rule="covariance", ca1_rule=rule, ca1_units=300,
+                    ca1_plateau_share=0.02, study_steps=5, pr_hidden=20)
+    aha = AHA(_VC(), cfg)
+    aha.ca1_baseline = torch.full((64,), 0.3)
+    result = oneshot.evaluate(aha, runs, [0], log=lambda line: None)
+    assert 0.0 <= result["accuracy"]["pm"][0] <= 1.0
+    assert result["recall_loss"][0] >= 0.0

@@ -796,3 +796,185 @@ class CA1BTSP():
     def __call__(self, X):
         """CA3 states -> CA1 activity -> returned EC codes."""
         return self.reinstate(self.respond(X))
+
+
+# E3. Perforant-path synapses per rat CA3 cell over rat EC layer II cells.
+# Treves and Rolls (1992, p. 190): "each CA3 pyramidal cell may receive up to
+# 3750 PP synapses in the rat (Amaral et al., 1990), possibly from as many
+# different cells in entorhinal cortex". Arellano and Rakic (2026): about
+# 108,000 EC layer II neurons in the rat.
+PP_SYNAPSES, EC2_CELLS = 3750, 108000
+PP_SHARE = PP_SYNAPSES / EC2_CELLS
+PP_RULES = ("willshaw", "covariance")
+PP_PRESYNAPTIC = ("positive", "above-mean")
+
+
+def perforant_parameters():
+    """Every setting of PerforantPath that is not fixed by the data, with its source.
+
+    source is "chosen" for a value picked on background-alphabet drawings,
+    "taken" for a value from a measurement or an earlier experiment, and
+    "structural" for a modelling choice that has no number to tune.
+    """
+    return [
+        {"name": "connection_share", "source": "taken",
+         "why": "each CA3 cell samples this share of EC units, 3,750 perforant-path synapses "
+                "per rat CA3 cell (Treves and Rolls 1992) over 108,000 rat EC layer II cells "
+                "(Arellano and Rakic 2026); in-degree = share x EC units, rounded half up"},
+        {"name": "presynaptic", "source": "chosen",
+         "why": "clipped binary only: an EC unit counts as active above zero, or above its mean "
+                "over the background drawings; chosen on background-alphabet drawings"},
+        {"name": "normalise", "source": "chosen",
+         "why": "a yes-or-no choice: each CA3 cell's perforant drive divided by its total "
+                "active input, or raw; chosen on background-alphabet drawings"},
+        {"name": "emax", "source": "chosen",
+         "why": "cue cells must reach the maximum drive less this share of it (E%-max, de "
+                "Almeida, Idiart and Lisman 2009), at most k of them; none means plain k-WTA; "
+                "chosen on background-alphabet drawings"},
+        {"name": "k", "source": "taken",
+         "why": "the cue never has more cells on than a stored pattern, DG's k"},
+        {"name": "post_baseline", "source": "taken",
+         "why": "covariance only: CA3 activity measured against k / n, as in E1's CA3 rule"},
+        {"name": "pre_baseline", "source": "structural",
+         "why": "covariance only: EC activity measured against its mean over the background "
+                "drawings, the same mean E4 uses for CA1's plateaus"},
+        {"name": "initial_weight", "source": "structural",
+         "why": "every perforant weight starts at 0 for each study set"},
+        {"name": "ceiling", "source": "structural",
+         "why": "clipped binary only: a weight is 0 or 1 (Willshaw and colleagues 1969)"},
+        {"name": "one_presentation", "source": "structural",
+         "why": "each drawing is learned once, with certainty, while DG's mossy fibres impose "
+                "its CA3 pattern; no learning at recall"},
+    ]
+
+
+def _round_half_up(x):
+    import math
+    return int(math.floor(x + 0.5))
+
+
+class PerforantPath():
+    """The perforant path from EC layer II to CA3, learned in one shot, for E3.
+
+    Biology. EC layer II cells send the perforant path to the distal apical
+    dendrites of CA3 pyramidal cells. Each synapse is weak, each CA3 cell
+    gets thousands of them, and they are associatively modifiable (NMDA
+    type). During learning the mossy fibres from DG, few but strong, force
+    the CA3 pattern; at recall the perforant path alone has to start it
+    (Treves and Rolls 1992).
+
+    Wiring. Each CA3 cell connects to a fixed random set of in_degree EC
+    units, in_degree = share x ec_dim rounded half up, drawn without repeats
+    from a generator derived from the seed. The default share is 3,750 /
+    108,000: rat perforant-path synapses per CA3 cell over rat EC layer II
+    cells. Scaling keeps that probability, not the count.
+
+    Learning, in one presentation per drawing, between the drawing's EC code
+    x and the CA3 pattern y DG imposes (0/1, k cells on):
+      willshaw    W_ij <- min(1, W_ij + y_i b_j) on connected synapses, with
+                  b_j = 1 when x_j > theta_j: theta = 0 ("positive") or the
+                  unit's background mean ("above-mean").
+      covariance  W_ij <- W_ij + (y_i - k/n)(x_j - xbar_j) on connected
+                  synapses, xbar the background mean EC code.
+    Weights start at 0. Clipped binary weights are all positive; covariance
+    weights take either sign, which breaks Dale's principle as E1's CA3 rule
+    does, and E2 is where inhibitory cells take over the negative part.
+
+    Recall. The drive to CA3 cell i is h_i = sum_j W_ij r_j, with r = b for
+    clipped binary and the raw rate x for covariance. With normalise, h_i is
+    divided by the cell's total active input sum_j C_ij r_j (0 stays 0). The
+    cue keeps the k most driven cells (k-WTA, a stand-in for feedback
+    inhibition); with emax it keeps only those within emax x |max| of the
+    most driven cell (E%-max; de Almeida, Idiart and Lisman 2009), so a cue
+    can have fewer than k cells, never more.
+
+    Everything runs on the CPU.
+    """
+
+    def __init__(self, ec_dim, n, k, rule, share=PP_SHARE, seed=0, presynaptic="positive",
+                 baseline=None, normalise=False, emax=None, connections=None):
+        if rule not in PP_RULES:
+            raise ValueError("rule must be one of {}".format(", ".join(PP_RULES)))
+        if presynaptic not in PP_PRESYNAPTIC:
+            raise ValueError("presynaptic must be one of {}".format(", ".join(PP_PRESYNAPTIC)))
+        needs_baseline = rule == "covariance" or presynaptic == "above-mean"
+        if needs_baseline and baseline is None:
+            raise ValueError("this rule needs the background mean EC code as baseline")
+        self.ec_dim, self.n, self.k, self.rule = ec_dim, n, k, rule
+        self.share, self.seed, self.presynaptic = share, seed, presynaptic
+        self.normalise, self.emax = normalise, emax
+        self.baseline = None if baseline is None else baseline.detach().float().cpu().flatten()
+        if connections is not None:
+            self.C = connections.bool().cpu()
+            self.in_degree = None
+        else:
+            self.in_degree = min(ec_dim, max(1, _round_half_up(share * ec_dim)))
+            self.C = self._wire()
+        self.W = torch.zeros(n, ec_dim)
+
+    def _derive(self, *parts):
+        import hashlib
+        key = ":".join(str(p) for p in ("perforant", self.seed) + parts).encode()
+        return int(hashlib.sha256(key).hexdigest()[:15], 16)
+
+    def _wire(self):
+        """in_degree distinct EC partners for every CA3 cell."""
+        g = torch.Generator().manual_seed(self._derive("wiring"))
+        idx = torch.rand(self.n, self.ec_dim, generator=g).argsort(dim=1)[:, :self.in_degree]
+        C = torch.zeros(self.n, self.ec_dim, dtype=torch.bool)
+        C.scatter_(1, idx, True)
+        return C
+
+    def active(self, E):
+        """Clipped binary's presynaptic activity b, (drawings, ec_dim) 0/1."""
+        E = E.detach().float().cpu()
+        theta = 0.0 if self.presynaptic == "positive" else self.baseline
+        return (E > theta).float()
+
+    def store(self, E, Y):
+        """Learns each (EC code, CA3 pattern) pair in one presentation.
+
+        Args:
+            E: (drawings, ec_dim) EC codes.
+            Y: (drawings, n) CA3 patterns DG imposes, active above 0.
+        """
+        Y = (Y.detach().cpu() > 0).float()
+        mask = self.C.float()
+        if self.rule == "willshaw":
+            self.W = ((self.W + Y.T @ self.active(E)) * mask).clamp(max=1.0)
+        else:
+            E = E.detach().float().cpu()
+            D = E - self.baseline
+            self.W = self.W + ((Y - self.k / self.n).T @ D) * mask
+        return self.W
+
+    def rates(self, E):
+        """What each EC unit sends at recall: b for clipped binary, x for covariance."""
+        if self.rule == "willshaw":
+            return self.active(E)
+        return E.detach().float().cpu()
+
+    def drive(self, E):
+        """Perforant drive to every CA3 cell, (drawings, n)."""
+        r = self.rates(E)
+        h = r @ self.W.T
+        if self.normalise:
+            total = r @ self.C.float().T
+            h = torch.where(total > 0, h / total.clamp_min(1e-12), torch.zeros_like(h))
+        return h
+
+    def select(self, h):
+        """The cue from a drive: k-WTA, then the E%-max threshold if set."""
+        top = kwta(h, self.k)
+        if self.emax is None:
+            return top
+        peak = h.max(dim=1, keepdim=True).values
+        threshold = peak - self.emax * peak.abs()
+        return top * (h >= threshold).float()
+
+    def cue(self, E):
+        """0/1 CA3 cue for EC codes E, at most k cells on per row."""
+        return self.select(self.drive(E))
+
+    def reset(self):
+        self.W = torch.zeros(self.n, self.ec_dim)

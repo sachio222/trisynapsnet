@@ -16,7 +16,7 @@ E1d asks whether CA3's capacity per cell stops falling as the network grows once
 
 ## Why the share of active cells
 
-E1c ran CA3 at 4.4% active at 225, 1,000 and 4,000 cells. The load per cell at 50% exact recall fell with size: from 1.12 to 0.60 for the covariance rule and from 1.25 to 0.31 for clipped binary synapses, on random patterns. Theory for sparse associative memories (Willshaw and colleagues, 1969; Tsodyks and Feigel'man, 1988) expects capacity per cell to fall at a fixed share active, and to hold or grow when k grows about with the logarithm of n. Rat DG runs at about 2% of granule cells active (Ramirez-Amaya and colleagues, 2013). No human measurement exists.
+E1c ran CA3 at 4.4% active at 225, 1,000 and 4,000 cells. The load per cell at 50% exact recall fell with size: from 1.12 to 0.60 for the covariance rule and from 1.25 to 0.31 for clipped binary synapses, on random patterns. Theory for binary synapses with exact recall (Willshaw and colleagues, 1969; Knoblauch, Palm and Sommer, 2010, Table 1) expects capacity per cell to fall at a fixed share active, and to grow when k grows about with the logarithm of n. With a few wrong cells allowed, the covariance rule's capacity per cell depends on the share but not on size (Tsodyks and Feigel'man, 1988). Rat DG runs at about 2% of granule cells active (Ramirez-Amaya and colleagues, 2013). No human measurement exists.
 
 ## What changes and what stays
 

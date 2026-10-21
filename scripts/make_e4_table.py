@@ -213,12 +213,24 @@ def mean_drawing_error(load_n, e1c):
     return float("nan")
 
 
-def stage_scores(name):
-    """{(level): {(stage): mean}} from an evaluate.py result file."""
+def stage_scores(name, match="study-to-test"):
+    """{level: {stage: mean}} from an evaluate.py result file, for one
+    matching direction. Test-to-study scores come from the same file's
+    "<stage> test-to-study" keys, or from a separate <name>_tts file."""
     rec = load(name)
     if rec is None:
         return None
-    return {lv["level"]: {st: v["mean"] for st, v in lv["summary"].items()} for lv in rec["levels"]}
+    out = {}
+    for lv in rec["levels"]:
+        summary = {st: v["mean"] for st, v in lv["summary"].items()}
+        if match == "study-to-test":
+            out[lv["level"]] = {st: v for st, v in summary.items() if " " not in st}
+        elif "pc test-to-study" in summary:
+            out[lv["level"]] = {st.split(" ")[0]: v for st, v in summary.items()
+                                if st.endswith(" test-to-study")}
+    if match == "test-to-study" and not out:
+        return stage_scores(name + "_tts", "study-to-test")
+    return out
 
 
 EVAL_ARMS = (("pm", "PM, pixels (AHA)"), ("btsp_human", "BTSP, 2,118 cells"),
@@ -233,8 +245,8 @@ def eval_table(task, kind):
         "VC | PR | CA3 | CA1 | CA1 minus CA3 |"
     out += [header, "|---" * (header.count("|") - 1) + "|"]
     for arm, label in EVAL_ARMS:
-        for match, tag in (("study-to-test", ""), ("test-to-study", "_tts")):
-            sc = stage_scores("e4_{}_official_covariance_225_10_{}{}{}".format(task, arm, sfx, tag))
+        for match in ("study-to-test", "test-to-study"):
+            sc = stage_scores("e4_{}_official_covariance_225_10_{}{}".format(task, arm, sfx), match)
             if sc is None:
                 continue
             for level, st in sc.items():

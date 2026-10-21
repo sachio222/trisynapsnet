@@ -84,7 +84,7 @@ Two values were chosen on data. The return rule's rate has no value to choose: e
 20. **Model.** AHA with CA3 on the covariance rule at 225 cells, 10 active, settling as in E1, normalised matching, 10 seeds, Apple's MPS backend. Only CA1 changes; a test checks that PR and CA3 give identical states whichever CA1 runs.
 21. **The CA1 stage.** With BTSP or backpropagation into EC, the CA1 stage holds the returned EC code, for study and test drawings alike, and matching runs on those codes. With PM it holds the rebuilt image, as before.
 22. **Arms.** PM, BTSP at both sizes, backpropagation into EC, and the same without its L2 penalty.
-23. **Matching.** Both directions, as in E1b: study-to-test, AHA's, where each study drawing picks its nearest test drawing; and test-to-study, where each test drawing picks its nearest stored one.
+23. **Matching.** Both directions, as in E1b, scored from the same states in one pass: study-to-test, AHA's, where each study drawing picks its nearest test drawing; and test-to-study, where each test drawing picks its nearest stored one.
 24. **Instance task.** E1b's instance runs from the evaluation alphabets, occlusion and noise at 0, 0.3 and 0.5, corruption seed 0.
 
 ### Not done

@@ -271,3 +271,26 @@ def test_one_shot_runs_score_an_ec_ca1(rule):
     result = oneshot.evaluate(aha, runs, [0], log=lambda line: None)
     assert 0.0 <= result["accuracy"]["pm"][0] <= 1.0
     assert result["recall_loss"][0] >= 0.0
+
+
+def test_one_pass_scores_both_matching_directions():
+    """Scoring a second direction in the same pass gives what a separate
+    pass in that direction gives, and leaves the first direction unchanged."""
+    from trisynapsnet.eval import oneshot
+    g = torch.Generator().manual_seed(1)
+    runs = [{"study": (torch.rand(6, 1, 8, 8, generator=g) < 0.3).float(),
+             "labels": torch.randperm(6, generator=g)} for _ in range(2)]
+    for run in runs:
+        run["recall"] = (run["study"][run["labels"]] + 0.5 * torch.rand(6, 1, 8, 8, generator=g))
+    cfg = AHAConfig(image_size=8, ca3_rule="covariance", study_steps=5, pr_hidden=20)
+
+    def score(**kw):
+        aha = AHA(_VC(), cfg)
+        return oneshot.evaluate(aha, runs, [0, 1], normalise=True, log=lambda line: None, **kw)
+
+    both = score(also=("test-to-study",))
+    s2t = score()
+    t2s = score(direction="test-to-study")
+    for stage in oneshot.STAGES:
+        assert both["accuracy"][stage] == s2t["accuracy"][stage]
+        assert both["accuracy"][stage + " test-to-study"] == t2s["accuracy"][stage]

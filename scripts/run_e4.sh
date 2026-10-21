@@ -9,8 +9,8 @@
 # Phase B: CA1 on its own, evaluation alphabets, 225 CA3 cells, 10 seeds,
 #          loads 20 to 500, both CA1 sizes.
 # Phase C: the same at 1,000 CA3 cells, 5 seeds.
-# Phase D: Lake's 20 runs, 10 seeds, both matching directions, CA3 with the
-#          covariance rule, every CA1 arm.
+# Phase D: Lake's 20 runs, 10 seeds, both matching directions scored in one
+#          pass, CA3 with the covariance rule, every CA1 arm.
 # Phase E: the instance task at occlusion and noise 0, 0.3 and 0.5.
 #
 # Usage: scripts/run_e4.sh [A|B|C|D|E]   (PYTHON=/path/to/python to pick one)
@@ -90,20 +90,24 @@ D|E)
         kind=${task_kind##*:}
         corruption=()
         if [ "$kind" != "none" ]; then corruption=(--"$kind" 0 0.3 0.5); fi
-        for match in study-to-test test-to-study; do
-            tag=$([ "$match" = "test-to-study" ] && echo "_tts" || echo "")
-            base="e4_${task}_official_covariance_225_10"
-            sfx=$([ "$kind" != "none" ] && echo "_${kind}" || echo "")
-            evaluate "${base}_pm${sfx}${tag}" --task "$task" --match "$match" ${corruption[@]+"${corruption[@]}"}
-            evaluate "${base}_btsp_human${sfx}${tag}" --task "$task" --match "$match" \
-                ${corruption[@]+"${corruption[@]}"} --ca1-rule btsp --ca1-units 2118 --ca1-plateau-share "$SHARE_HUMAN"
-            evaluate "${base}_btsp_rat${sfx}${tag}" --task "$task" --match "$match" \
-                ${corruption[@]+"${corruption[@]}"} --ca1-rule btsp --ca1-units 375 --ca1-plateau-share "$SHARE_RAT"
-            evaluate "${base}_backprop_ec${sfx}${tag}" --task "$task" --match "$match" \
-                ${corruption[@]+"${corruption[@]}"} --ca1-rule backprop_ec
-            evaluate "${base}_backprop_ec_nol2${sfx}${tag}" --task "$task" --match "$match" \
-                ${corruption[@]+"${corruption[@]}"} --ca1-rule backprop_ec --ca1-l2 0
-        done
+        base="e4_${task}_official_covariance_225_10"
+        sfx=$([ "$kind" != "none" ] && echo "_${kind}" || echo "")
+        both=(--task "$task" --match study-to-test --also-match test-to-study)
+        evaluate "${base}_pm${sfx}" "${both[@]}" ${corruption[@]+"${corruption[@]}"}
+        # A PM file from before both directions ran in one pass gets its
+        # test-to-study scores from a second file.
+        if ! grep -q '"pc test-to-study"' "results/${base}_pm${sfx}.json"; then
+            evaluate "${base}_pm${sfx}_tts" --task "$task" --match test-to-study \
+                ${corruption[@]+"${corruption[@]}"}
+        fi
+        evaluate "${base}_btsp_human${sfx}" "${both[@]}" ${corruption[@]+"${corruption[@]}"} \
+            --ca1-rule btsp --ca1-units 2118 --ca1-plateau-share "$SHARE_HUMAN"
+        evaluate "${base}_btsp_rat${sfx}" "${both[@]}" ${corruption[@]+"${corruption[@]}"} \
+            --ca1-rule btsp --ca1-units 375 --ca1-plateau-share "$SHARE_RAT"
+        evaluate "${base}_backprop_ec${sfx}" "${both[@]}" ${corruption[@]+"${corruption[@]}"} \
+            --ca1-rule backprop_ec
+        evaluate "${base}_backprop_ec_nol2${sfx}" "${both[@]}" ${corruption[@]+"${corruption[@]}"} \
+            --ca1-rule backprop_ec --ca1-l2 0
     done
     ;;
 *)

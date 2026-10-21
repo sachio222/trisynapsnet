@@ -89,6 +89,8 @@ def build_parser():
                    help="cells updated per step for bipolar rules; by default 20 per 225 cells")
     p.add_argument("--study-steps", type=int, default=60)
     p.add_argument("--match", default=oneshot.DIRECTIONS[0], choices=oneshot.DIRECTIONS)
+    p.add_argument("--also-match", nargs="*", default=[], choices=oneshot.DIRECTIONS,
+                   help="more matching directions scored from the same states, as '<stage> <direction>'")
     p.add_argument("--normalise", action="store_true",
                    help="L2-normalise every stage's vectors before MSE matching")
     p.add_argument("--normalise-input", action="store_true",
@@ -224,7 +226,8 @@ def main(argv=None):
     seeds = range(args.first_seed, args.first_seed + args.seeds)
     results = oneshot.evaluate_levels(aha, runs, levels, seeds, direction=args.match,
                                       normalise=args.normalise, diagnostics=True,
-                                      log=lambda line: print(line, flush=True))
+                                      log=lambda line: print(line, flush=True),
+                                      also=tuple(args.also_match))
 
     records = []
     for result in results:

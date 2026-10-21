@@ -87,7 +87,7 @@ def run_diagnostics(aha, study, recall, labels):
 
 
 def evaluate(aha, runs, seeds, stages=STAGES, direction=DIRECTIONS[0], normalise=False,
-             diagnostics=False, log=print):
+             diagnostics=False, log=print, also=()):
     """Runs every one-shot run once per seed and scores each stage.
 
     The hippocampus is reset before every run with a seed made from the seed
@@ -100,13 +100,13 @@ def evaluate(aha, runs, seeds, stages=STAGES, direction=DIRECTIONS[0], normalise
     """
     levels = [(0.0, [run["recall"] for run in runs])]
     result = evaluate_levels(aha, runs, levels, seeds, stages, direction, normalise,
-                             diagnostics, log)[0]
+                             diagnostics, log, also)[0]
     del result["level"]
     return result
 
 
 def evaluate_levels(aha, runs, levels, seeds, stages=STAGES, direction=DIRECTIONS[0],
-                    normalise=False, diagnostics=False, log=print):
+                    normalise=False, diagnostics=False, log=print, also=()):
     """Scores one study against several versions of the test drawings.
 
     E1b corrupts the test drawings at many levels. The study set and the
@@ -122,15 +122,19 @@ def evaluate_levels(aha, runs, levels, seeds, stages=STAGES, direction=DIRECTION
             list with one (20, 1, H, W) tensor per run. Keep the same
             tensors across calls and the VC cache encodes each one once.
 
+        also: more matching directions to score from the same states. Each
+            adds accuracy keys "<stage> <direction>" (added for E4).
+
     Returns one dict per level, in the order given, shaped like evaluate()'s
     result plus the level.
     """
     start = time.time()
-    out = [{"level": level, "accuracy": {stage: [] for stage in stages}, "recall_loss": [],
+    keys = list(stages) + ["{} {}".format(stage, d) for d in also for stage in stages]
+    out = [{"level": level, "accuracy": {key: [] for key in keys}, "recall_loss": [],
             "diagnostics": {name: [] for name in DIAGNOSTICS}} for level, _ in levels]
 
     for seed in seeds:
-        per_run = [{"accuracy": {stage: [] for stage in stages}, "recall_loss": [],
+        per_run = [{"accuracy": {key: [] for key in keys}, "recall_loss": [],
                     "diagnostics": {name: [] for name in DIAGNOSTICS}} for _ in levels]
         for i, run in enumerate(runs):
             aha.reset(seed=seed * 1000 + i)
@@ -142,6 +146,9 @@ def evaluate_levels(aha, runs, levels, seeds, stages=STAGES, direction=DIRECTION
                 for stage in stages:
                     acc["accuracy"][stage].append(run_accuracy(
                         study[stage], recall[stage], run["labels"], direction, normalise))
+                    for d in also:
+                        acc["accuracy"]["{} {}".format(stage, d)].append(run_accuracy(
+                            study[stage], recall[stage], run["labels"], d, normalise))
                 # With E4's CA1 the "pm" stage is an EC code, so its loss is
                 # taken against the study drawings' EC codes.
                 target = run["study"] if recall["pm"].dim() == 4 else study["vc"]
@@ -151,8 +158,8 @@ def evaluate_levels(aha, runs, levels, seeds, stages=STAGES, direction=DIRECTION
                         acc["diagnostics"][name].append(value)
 
         for res, acc in zip(out, per_run):
-            for stage in stages:
-                res["accuracy"][stage].append(sum(acc["accuracy"][stage]) / len(runs))
+            for key in keys:
+                res["accuracy"][key].append(sum(acc["accuracy"][key]) / len(runs))
             res["recall_loss"].append(sum(acc["recall_loss"]) / len(runs))
             line = "seed {:>3}  ".format(seed)
             if len(levels) > 1:

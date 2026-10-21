@@ -1,6 +1,6 @@
 # E1d protocol
 
-E1d asks whether CA3's capacity per cell stops falling as the network grows once DG and CA3 codes are as sparse as measured. This file lists every choice E1d makes. The choices went into code and tests before the reported runs.
+E1d asks whether CA3's capacity per cell stops falling as the network grows once DG and CA3 codes are as sparse as measured. This file lists every choice E1d makes. The choices went into code and tests before the reported runs, except items 14a and 14b, which changed during them.
 
 ## Terms
 
@@ -46,6 +46,8 @@ E1c ran CA3 at 4.4% active at 225, 1,000 and 4,000 cells. The load per cell at 5
 12. **Storage at scale.** Patterns are kept as lists of active cells. The local rules store a running count of how often each pair of cells fired together, and each load adds only its new patterns. Clipped binary weights from these counts equal E1c's exactly. Covariance weights are computed in float64 from the counts, where E1c summed them in float32; they differ by about 10⁻⁷. Cells whose counts match then tie exactly in kWTA, where E1c's rounding broke the tie. Past capacity this changes the outcome for up to 3% of cues; below capacity nothing changes (`tests/test_sparsecodes.py`).
 13. **Ideal lookup at scale.** Compared a chunk of stored patterns at a time, with the same tie rule as E1c.
 14. **Seeds.** Random patterns: 10 at 225 and 1,000 cells, 5 at 4,000 and 16,000 cells. Evaluation drawings: 10 at 225 and 1,000 cells, 5 at 4,000. Background drawings: 5 at every size, as the check before the evaluation alphabets.
+14a. **Changed during the run: the pseudo-inverse at 16,000 cells.** Each load needs the pseudo-inverse of a load-by-16,000 matrix in float64, up to 10,000 by 16,000, and two of these runs at once, beside other jobs on the machine, filled its memory and swap. They were stopped and are not rerun. What finished stays in the results and is labelled: 5 seeds at 4.4%, 4 at 2%, 2 at 1%, none for the log-scaled code. The driver now runs the pseudo-inverse up to 4,000 cells only.
+14b. **Changed during the run: seeds for the local rules at 16,000 cells.** 5 seeds at 4.4% and 2%. The 1% and log-scaled runs went on after the stop, one process at a time, with 3 seeds to bound run time (about 20 minutes per seed for the log-scaled code). The first seed of the log-scaled runs comes from a timing pilot made with the same code and seed.
 15. **Not measured here.** CA1's reconstruction error, which E1c covered at 4.4% and which depends on CA1's own capacity more than CA3's.
 
 ## Measures

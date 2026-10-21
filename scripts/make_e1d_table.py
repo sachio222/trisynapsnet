@@ -515,23 +515,27 @@ def plot_capacity(ca3, out):
                     v, kind = per_cell(ca3, source, rule, n, s)
                     if v is None or kind == "below":
                         continue
-                    xs.append(n)
-                    ys.append(v)
                     if kind == "above":
                         open_x.append(n)
                         open_y.append(v)
-                if not xs:
-                    continue
+                    else:
+                        xs.append(n)
+                        ys.append(v)
                 ax.plot(xs, ys, "-", color=SPARSITY_COLOURS[s], marker=SPARSITY_MARKERS[s],
                         ms=5, lw=1.8, label=SPARSITY_NAMES[s])
                 if open_x:
                     ax.plot(open_x, open_y, linestyle="none", marker="^", ms=9, mfc="white",
                             mec=SPARSITY_COLOURS[s])
+            from matplotlib.ticker import FuncFormatter, LogLocator, NullLocator
             ax.set_xscale("log")
             ax.set_yscale("log")
-            ax.set_xticks(SIZES)
-            ax.set_xticklabels(["{:,}".format(n) for n in SIZES], fontsize=8)
-            ax.minorticks_off()
+            sizes = [n for n in SIZES if source == "random" or n < 16000]
+            ax.set_xticks(sizes)
+            ax.set_xticklabels(["{:,}".format(n) for n in sizes], fontsize=8)
+            ax.xaxis.set_minor_locator(NullLocator())
+            ax.yaxis.set_major_locator(LogLocator(subs=(1.0, 2.0, 5.0)))
+            ax.yaxis.set_minor_locator(NullLocator())
+            ax.yaxis.set_major_formatter(FuncFormatter(lambda y, _: "{:g}".format(y)))
             tag = "40% removed" if rule == "pinverse" else "clean cues"
             ax.set_title("{}: {}, {}".format(SOURCE_NAMES[source], LABELS[rule], tag),
                          fontsize=9, loc="left")
@@ -539,8 +543,8 @@ def plot_capacity(ca3, out):
             ax.set_ylabel("50% exact-recall load per cell", fontsize=8)
             _style(ax)
         axes[i][0].legend(fontsize=7, frameon=False)
-    fig.suptitle("Load per cell at which exact recall falls to 50%, means over seeds. "
-                 "Open triangles: recall stayed above 50% up to that load, a lower bound.",
+    fig.suptitle("Load per cell at which exact recall falls to 50%, means over seeds. Open "
+                 "triangles: recall stayed above 50% at every character available, a lower bound.",
                  fontsize=10)
     FIGURES.mkdir(parents=True, exist_ok=True)
     fig.savefig(out)

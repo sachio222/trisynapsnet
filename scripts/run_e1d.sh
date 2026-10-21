@@ -11,7 +11,8 @@
 #          check before the evaluation alphabets.
 # Phase B: CA3 on its own with DG patterns of evaluation-alphabet drawings,
 #          the reported run.
-# Phase C: random patterns at 16,000 cells.
+# Phase C: random patterns at 16,000 cells, local rules only. Run it with
+#          JOBS=1: each process holds two 16,000 by 16,000 matrices.
 # Phase D: the full model at 225 cells with 5 of them active (2%, rounded
 #          half up), on validation runs from the background alphabets:
 #          Lake-style classification and the instance task under occlusion
@@ -47,12 +48,15 @@ k_for() {
 }
 
 seeds_for() {
-    # seeds_for <source> <units>
-    case "$1:$2" in
+    # seeds_for <source> <units> <sparsity>
+    case "$1:$2:$3" in
         background:*) echo 5;;
-        *:225|*:1000) echo 10;;
-        *:4000) echo 5;;
-        *:16000) echo "${SEEDS_16000:-5}";;
+        *:225:*|*:1000:*) echo 10;;
+        *:4000:*) echo 5;;
+        # 1% and log-scaled ran after the memory stop, with 3 seeds to
+        # bound run time.
+        *:16000:1|*:16000:log) echo 3;;
+        *:16000:*) echo 5;;
     esac
 }
 
@@ -71,7 +75,10 @@ ca3_jobs() {
             local tag=$split
             if [ "$source" = "random" ]; then tag=random; fi
             for rule in $RULES; do
-                echo "$source $split $units $rule $sparsity $(seeds_for "$tag" "$units")"
+                # The pseudo-inverse of a load-by-16,000 matrix ran the
+                # machine out of memory; it runs up to 4,000 cells only.
+                if [ "$rule" = "pinverse" ] && [ "$units" -gt 4000 ]; then continue; fi
+                echo "$source $split $units $rule $sparsity $(seeds_for "$tag" "$units" "$sparsity")"
             done
         done
     done

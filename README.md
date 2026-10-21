@@ -241,6 +241,48 @@ Three more results stood out:
 
 BTSP stores 20 drawings in about 1 second on the CPU, one presentation each, against about 2.3 seconds for the backpropagation networks' 60 steps. At 500 drawings the 2,118-cell BTSP CA1 takes 10.1 seconds against 8.2, so one presentation is not always faster in wall time. Every number is in `results/e4.md`, and the figures are `figures/e4_identification.pdf` and `figures/e4_partial.pdf`.
 
+## E3: a perforant path learned in one shot
+
+E1b and E1c found that CA3's settling never helps end to end in AHA's layout: PR hands CA3 a full pattern already near the right memory, so nothing is left to complete. In the brain, CA3 gets two inputs from the cortex. The mossy fibres from DG are few and strong, and Treves and Rolls (1992) proposed that they force a new pattern onto CA3 cells during learning. The perforant path from EC layer II is many weak synapses that change when the cells on both sides fire together, and they proposed that it starts recall. E3 replaces PR with such a perforant path, which removes the last backpropagation from the hippocampal pathway, and asks whether settling then helps.
+
+Each CA3 cell connects to a fixed random 710 of the 20,449 EC units. That is the share of rat EC layer II cells one rat CA3 cell hears from, 3,750 synapses (Treves and Rolls, 1992) over 108,000 cells (Arellano and Rakic, 2026), applied to the model's EC. During study, while DG's pattern holds CA3, each synapse learns in one presentation, with clipped binary synapses (a synapse turns on when its EC unit and its CA3 cell are active together) or with the covariance rule. At recall the perforant input alone picks the cue: the k most driven CA3 cells, or, with an E%-max threshold, only those within a set share of the most driven cell, so a cue can have fewer than k cells. E%-max is a form of feedback inhibition proposed by de Almeida, Idiart and Lisman (2009). CA3 then settles from the cue, or the cue goes straight on, and E4's one-shot CA1 returns an EC code. Three settings were chosen on Omniglot's background alphabets: normalised input and E%-max 0.3 for clipped binary synapses, and normalised input with the plain k most driven cells for the covariance rule. DG and CA3 run with 5 of 225 cells active (2%, E1d's setting), and with 10 (4.4%) as a check. Every choice and source is in `docs/e3_protocol.md`.
+
+The predictions, written before the runs:
+
+1. The perforant cue is weaker than PR's: without settling, accuracy on both tasks falls below the PR model's.
+2. With the perforant path, settling helps end to end: on the instance task, scored test-to-study, settling beats no settling by at least 5 points at some corruption level below capacity.
+3. On Lake's runs, the fully local model scores below the PR model.
+4. CA1-stage accuracy stays within 3 points of the CA3 stage.
+
+### E3 results
+
+With the perforant path, settling helps once CA1 reads its result. On the instance task, matched test-to-study, CA1 returns the right drawing's code this often, in percent, 10 seeds:
+
+| CA3 input | Settling | Clean | Occlusion 0.3 | Occlusion 0.5 | Occlusion 0.7 | Noise 0.3 |
+|---|---|---|---|---|---|---|
+| Perforant, covariance | none | 35.4 | 29.2 | 20.6 | 13.5 | 11.2 |
+| Perforant, covariance | yes | 53.6 | 45.3 | 31.9 | 19.7 | 16.5 |
+| Perforant, clipped binary | none | 98.8 | 80.0 | 43.7 | 16.9 | 8.7 |
+| Perforant, clipped binary | yes | 99.1 | 91.7 | 61.1 | 25.8 | 10.9 |
+| PR | none | 99.2 | 96.3 | 76.0 | 35.2 | 46.3 |
+| PR | covariance | 99.2 | 96.6 | 77.7 | 36.5 | 48.9 |
+
+On Lake's runs, CA1 stage, the fully local model with clipped binary synapses scores 25.6% matched study-to-test and 29.8% test-to-study, against 58.7% and 65.8% for PR with covariance settling.
+
+- **Prediction 1 partly held.** On Lake's runs the perforant cue without settling scores 37.7% (clipped binary) and 33.5% (covariance) at CA3 matched study-to-test, against 61.0% for PR's top cells; under noise 0.3 on the instance task, 10.4% and 15.7% against 48.8% test-to-study. On clean and lightly occluded drawings of the instance task the clipped binary cue matches PR: 99.9% against 100.0% clean, and 76.1% against 75.5% at occlusion 0.5 matched study-to-test.
+- **Prediction 2 held at the CA1 stage and failed at the CA3 stage.** Settling lifts CA1 by 18.2 points on clean drawings with the covariance rule and by 17.4 points at occlusion 0.5 with clipped binary synapses, higher in all 10 seeds. Scored at CA3 itself it adds at most 1.4 points. Matching a CA3 state against the stored patterns already finds the nearest memory, so the partial cue scores well there. CA1 reading the same partial cue returns the right code far less often (80.0% against 93.0% at occlusion 0.3), and the settled pattern restores it (91.7%).
+- **Prediction 3 held.** The fully local model trails PR by 33 to 38 points on Lake's runs at CA1, in both matching directions and with either rule.
+- **Prediction 4 held for every arm that settles and for PR, and failed for perforant cues passed on without settling.** The settling arms and PR stay within 2.8 points of CA3. Unsettled perforant cues lose up to 20.1 points at CA1, the same weakness settling repairs.
+
+These results also stood out:
+
+- **The perforant path stores the drawing, not the character.** On the instance task the clipped binary cue holds 99.5% of the right pattern's cells for clean drawings. On Lake's runs, where a different person drew the test character, the stored pattern nearest the cue is the right one for 30.2% of drawings, against 67.3% for the whole vision code matched directly. Connecting each CA3 cell to every EC unit, a diagnostic added after the runs on background alphabets, lifts the best perforant arm from 39.0% to 49.6% there, against 68.3% for PR, so sparse wiring explains part of that gap and one-shot learning the rest.
+- **The gain needs CA3 below capacity.** In E1c's load runs, settling's largest gain at CA1 on clean and occluded drawings is 15.3 and 17.4 points at 20 and 50 drawings, 6.4 at 100, and none at 200, where exact recall of clean drawings after clipped binary settling has fallen to 47.1%.
+- **Pixel noise defeats the perforant cue sooner than PR.** At noise 0.3 the clipped binary cue holds 11.1% of the right cells, PR's top cells 49.2%.
+- **More active cells change little.** At 4.4% the perforant arms score 26.7% to 30.6% on Lake's runs at CA3 matched test-to-study, and settling still lifts CA1 by up to 15.4 points on the instance task.
+
+All E3 runs took 62 minutes of process time, at most two at once. Every number is in `results/e3.md`.
+
 ## Install
 
 Clone this repo next to aha4, so that `../aha4/checkpoints/vc_pretrained.pth.tar` and `../aha4/data` exist. aha4's `evaluate.py` downloads the data on its first run.
@@ -355,10 +397,29 @@ python scripts/make_e4_table.py
 
 Set `TSN_AHA4` to aha4's folder when it does not sit next to this repo, as in a git worktree.
 
+## Run E3
+
+Every arm from one study, on Lake's runs or at one load:
+
+```
+python -m trisynapsnet.eval.perforant --task classification --seeds 10 --wil-normalise --wil-emax 0.3 --cov-normalise
+python -m trisynapsnet.eval.perforant --task load --load 100 --seeds 5 --wil-normalise --wil-emax 0.3 --cov-normalise
+```
+
+A result file is written after every seed, and a rerun picks up after the last finished seed. The whole experiment, then `results/e3.md`. Phase A, on background alphabets, picks the perforant settings the later phases take:
+
+```
+PYTHON=.venv/bin/python scripts/run_e3.sh A
+python scripts/make_e3_table.py --select
+PYTHON=.venv/bin/python WIL="--wil-normalise --wil-emax 0.3" COV="--cov-normalise" JOBS=2 scripts/run_e3.sh B   # then C, D and E
+PYTHON=.venv/bin/python scripts/run_e3.sh status
+python scripts/make_e3_table.py
+```
+
 ## Layout
 
 ```
-trisynapsnet/model/modules.py   brain-region parts, including the CA3 rules and one-shot CA1
+trisynapsnet/model/modules.py   brain-region parts, including the CA3 rules, the perforant path and one-shot CA1
 trisynapsnet/model/aha.py       the parts wired together
 trisynapsnet/data/omniglot.py   Lake's runs, the validation runs and the instance runs
 trisynapsnet/data/corrupt.py    occlusion and noise for test drawings
@@ -368,8 +429,9 @@ trisynapsnet/eval/ca3space.py   E1c: CA3 on its own, cued with damaged patterns
 trisynapsnet/eval/endtoend.py   E1c: the full model studying many drawings at once
 trisynapsnet/eval/sparsecodes.py  E1d: E1c's CA3 test at sparser codes and larger loads
 trisynapsnet/eval/ca1space.py   E4: CA1 on its own, returning EC codes against load
-scripts/                        E1 to E1d and E4 drivers, table and figure builders
-docs/                           E1b's, E1c's, E1d's and E4's protocols
+trisynapsnet/eval/perforant.py  E3: every arm, PR or perforant path, with and without settling
+scripts/                        E1 to E1d, E3 and E4 drivers, table and figure builders
+docs/                           E1b's, E1c's, E1d's, E3's and E4's protocols
 ```
 
 Code adapted from aha4 says so at the top of each file.

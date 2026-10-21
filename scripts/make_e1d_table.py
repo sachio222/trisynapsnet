@@ -481,6 +481,13 @@ def write_markdown(ca3, out=RESULTS / "e1d.md", results_dir=RESULTS):
               ""] + times_table(ca3) + [""]
     notes = sorted({note for e in ca3.values() for note in e["record"]["notes"]
                     if "identity" not in note and "characters" not in note})
+    for key in sorted(ca3, key=lambda key: (key[0], key[2], key[3], key[1])):
+        r = ca3[key]["record"]
+        if key[1] == "pinverse" and not r.get("complete", True):
+            notes.append("{}, {} at {:,} cells with {} active stopped early, with {} seed{}: the "
+                         "pseudo-inverse at this size filled the machine's memory (protocol item "
+                         "14a).".format(SOURCE_NAMES[key[0]], LABELS[key[1]], key[2], key[3],
+                                        len(r["seeds"]), "" if len(r["seeds"]) == 1 else "s"))
     if notes:
         L += ["## Notes", ""] + ["- " + n for n in notes] + [""]
     Path(out).write_text("\n".join(L))

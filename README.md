@@ -153,6 +153,50 @@ The ideal lookup identifies the right memory for almost every damaged cue tested
 
 Every number is in `results/e1c.md`, and the figures are `figures/e1c_*.pdf`.
 
+## E4: one-shot learning in CA1
+
+CA1 is the hippocampal field after CA3. In the brain it sends the memory back to entorhinal cortex (EC), the cortex that feeds the hippocampus. In AHA, the part called PM plays CA1: a small network trained by backpropagation, 60 optimiser steps over the study set, to rebuild a drawing's pixels from its stored CA3 pattern, a procedure with no known counterpart in the brain. E1c also found that PM's error from the exact stored pattern rises from 0.0046 at 20 drawings to 0.0363 at 100, which looked like a limit on how many drawings CA1 can hold.
+
+E4 replaces PM with a CA1 that learns each drawing in one presentation, using a rule measured in CA1 neurons. That rule is behavioural timescale synaptic plasticity (BTSP). A plateau potential, a long calcium spike in a CA1 cell's dendrites, changes every synapse from a CA3 cell that was active within a few seconds of it, in a single trial (Bittner and colleagues, 2017). The change depends on the synapse's present weight: weak synapses strengthen and strong ones weaken (Milstein and colleagues, 2021). Plateaus are set off by input from EC layer III (Grienberger and Magee, 2022). Wu and Maass (2025) reduced the rule to on/off synapses: when a CA3 input is active near a plateau, the synapse flips with probability 0.5, from off to on or from on to off. E4 uses that rule as published.
+
+In E4's CA1, each drawing's EC code, the frozen vision network's 20,449 numbers, decides which CA1 cells get a plateau. Their synapses from the drawing's active CA3 cells then flip as the rule says. CA1 sends the memory back to EC through synapses that grow with the product of CA1 and EC activity, learned in the same presentation. At recall, a CA3 state drives CA1, the most driven CA1 cells fire, and they return an EC code. CA1 runs at two sizes from measured cell counts: 2,118 cells, the human ratio of CA1 to CA3 cells applied to AHA's 225 CA3 cells, and 375 cells, the rat ratio.
+
+The returned EC code is scored by identification: the stored EC code closest to it, by cosine similarity, should be the right drawing's. Chance is 1 over the number stored. The comparison network, named before the runs, is PM's network and training with the EC code as its target instead of pixels. The rule has 10 settings. Two were chosen on Omniglot's background alphabets: the share of CA1 cells that get a plateau per drawing (0.005 at 2,118 cells, the measured value, and 0.01 at 375), and measuring each cell's plateau drive against its drive from the mean background EC code, a stand-in for feedforward inhibition. Every choice and the quoted rule are in `docs/e4_protocol.md`.
+
+The predictions, written before the runs:
+
+1. At 20 drawings, BTSP CA1 identifies the right drawing as often as the comparison network, within 3 points, after one presentation.
+2. Past 50 drawings BTSP holds up better: higher identification at 100 and 200 drawings.
+3. With CA3 completing partial cues, BTSP CA1's output from a partial cue approaches its output from the exact pattern, below CA3's capacity.
+4. On Lake's runs, accuracy at the CA1 stage stays within 3 points of the CA3 stage.
+
+### E4 results
+
+The planned comparison network learns nothing. EC codes are about 19 times smaller than pixels, so PM's L2 penalty, which pulls every weight toward zero, outweighs the error signal, and the network returns nearly the same code for every drawing. It identifies 5.0% at 20 drawings, chance. Predictions 1 and 2 against it say nothing about BTSP. Two variants of it were run: one without the L2 penalty, the informative comparison, and one with the EC target scaled up 19.3 times, as a check.
+
+Identification from the exact stored CA3 pattern, in percent, evaluation alphabets, 225 CA3 cells, 10 seeds:
+
+| Drawings stored | BTSP, 2,118 cells | BTSP, 375 cells | Backprop into EC as planned | Backprop into EC, no L2 penalty | Backprop into EC, target scaled |
+|---|---|---|---|---|---|
+| 20 | 99.0 | 97.0 | 5.0 | 100.0 | 41.0 |
+| 50 | 98.6 | 92.0 | 2.0 | 99.8 | 2.6 |
+| 100 | 94.8 | 72.4 | 1.0 | 81.4 | 1.0 |
+| 200 | 65.1 | 35.3 | 0.5 | 34.8 | 0.5 |
+| 500 | 5.3 | 3.5 | 0.3 | 3.6 | 0.3 |
+
+- **Prediction 1.** Against the planned network it failed in the letter, since BTSP is about 94 points ahead, not within 3. Against the network without the L2 penalty it held: 99.0 against 100.0 at 2,118 cells, and 97.0 against 100.0 at 375 cells, exactly 3 points. Against the scaled target it failed, with BTSP far ahead of its 41.0.
+- **Prediction 2.** Against the planned network it held, uninformatively. Against the network without the L2 penalty it held at 2,118 cells, 94.8 and 65.1 against 81.4 and 34.8 at 100 and 200 drawings, and failed at 375 cells, 72.4 against 81.4 at 100 drawings and level at 200. Against the scaled target it held at both sizes.
+- **Prediction 3 held.** At 2,118 cells and 20 drawings, BTSP identifies 99.0% from the exact pattern, and 99.5% and 99.0% from cues missing 40% and 80% of their active cells once CA3 settles them with the covariance rule, against 96.5% and 89.0% from the raw cues. At 50 drawings settling still restores 98.6% from 40% removed. As CA3 nears its capacity the gap opens with CA3's exact recall, and at 200 drawings settling hurts. The completion is CA3's: the network without the L2 penalty gains the same way.
+- **Prediction 4 held.** On Lake's runs the CA1 stage stays within 2.1 points of CA3 at both sizes and in both matching directions: 55.8% against 53.8% at 2,118 cells matched AHA's way.
+
+Three more results stood out:
+
+- **PM's rising error comes from its L2 penalty, not from CA1's capacity.** With E1c's drawings, seeds and starting weights, PM repeats E1c's errors exactly (0.0046, 0.0226 and 0.0363 at 20, 50 and 100 drawings) and identifies 13.8% of drawings at 100. The same network and the same 60 steps without the L2 penalty reach errors of 0.0006, 0.0012 and 0.0020, and identify 99.5% of drawings even at 500. It still learns by backpropagation over many steps, which BTSP does not need.
+- **BTSP gains most from a larger CA3.** At 1,000 CA3 cells with 44 active, BTSP with 9,412 CA1 cells identifies 99.3% at 200 drawings and 39.7% at 500. The network without the L2 penalty identifies 3.7% and 0.2%.
+- **The rat-sized CA1 struggles with alike drawings.** On the instance task, where all 20 drawings show one character, 375-cell BTSP falls up to 7.1 points below CA3, with only 4 plateau cells per drawing. At 2,118 cells it stays within 1.4 points.
+
+BTSP stores 20 drawings in about 1 second on the CPU, one presentation each; the backpropagation networks take about 2.3 seconds for their 60 steps. Every number is in `results/e4.md`, and the figures are `figures/e4_identification.pdf` and `figures/e4_partial.pdf`.
+
 ## Install
 
 Clone this repo next to aha4, so that `../aha4/checkpoints/vc_pretrained.pth.tar` and `../aha4/data` exist. aha4's `evaluate.py` downloads the data on its first run.
@@ -225,10 +269,35 @@ The whole experiment, then `results/e1c.md` and the figures:
 PYTHON=.venv/bin/python scripts/run_e1c.sh
 ```
 
+## Run E4
+
+CA1 on its own, every CA1 arm, one CA1 size:
+
+```
+python -m trisynapsnet.eval.ca1space --split evaluation --units 225 --ratios human --shares 0.005 --seeds 10
+```
+
+It reads the vision codes E1c cached in `data/cache`; pass `--cache-dir` to use another folder. `--active-share` sets the share of active DG and CA3 cells. Lake's runs with one-shot CA1:
+
+```
+python -m trisynapsnet.eval.evaluate --ca3-rule covariance --normalise --ca1-rule btsp \
+    --ca1-units 2118 --ca1-plateau-share 0.005 --also-match test-to-study
+```
+
+The whole experiment, then `results/e4.md` and the figures. Phase A, on background alphabets, picks the plateau shares that the later phases take:
+
+```
+PYTHON=.venv/bin/python scripts/run_e4.sh A
+PYTHON=.venv/bin/python SHARE_HUMAN=0.005 SHARE_RAT=0.01 scripts/run_e4.sh B   # then C, D and E
+python scripts/make_e4_table.py
+```
+
+Set `TSN_AHA4` to aha4's folder when it does not sit next to this repo, as in a git worktree.
+
 ## Layout
 
 ```
-trisynapsnet/model/modules.py   brain-region parts, including the CA3 rules
+trisynapsnet/model/modules.py   brain-region parts, including the CA3 rules and one-shot CA1
 trisynapsnet/model/aha.py       the parts wired together
 trisynapsnet/data/omniglot.py   Lake's runs, the validation runs and the instance runs
 trisynapsnet/data/corrupt.py    occlusion and noise for test drawings
@@ -236,8 +305,9 @@ trisynapsnet/eval/oneshot.py    one-shot scoring and diagnostics
 trisynapsnet/eval/evaluate.py   command line for one setting
 trisynapsnet/eval/ca3space.py   E1c: CA3 on its own, cued with damaged patterns
 trisynapsnet/eval/endtoend.py   E1c: the full model studying many drawings at once
-scripts/                        E1, E1b and E1c drivers, table and figure builders
-docs/                           E1b's and E1c's protocols
+trisynapsnet/eval/ca1space.py   E4: CA1 on its own, returning EC codes against load
+scripts/                        E1, E1b, E1c and E4 drivers, table and figure builders
+docs/                           E1b's, E1c's and E4's protocols
 ```
 
 Code adapted from aha4 says so at the top of each file.

@@ -8,6 +8,16 @@ This project builds an algorithm that learns from one example, using only circui
 
 **AHA**, the Artificial Hippocampal Algorithm (Kowadlo, Ahmed and Rawlinson, [arXiv 1909.10340](https://arxiv.org/abs/1909.10340)), is a model of the hippocampus, the brain region that stores a new experience after one exposure. It is tested on Omniglot, a set of 1,623 handwritten characters from 50 alphabets. In each of Lake's 20 test runs, the model sees 20 characters once, then has to match 20 new drawings of them by a different person. Chance is 5%. Our reproduction of AHA lives in [aha4](https://github.com/sachio222/aha4). This project reuses aha4's frozen vision network and its copy of Omniglot, and it never changes aha4.
 
+## Design principles
+
+The model is built from measured parts of the brain, and its scores measure how close it comes to real brains and real behaviour. Five principles follow from that, and every experiment keeps to them:
+
+- **Every part has a measured biological counterpart**, or the documentation labels it a stand-in for a part whose biology is not yet known. Each stand-in is listed with the experiment that uses it.
+- **Learning rules are local.** A synapse changes using only the activity of the two cells it connects, plus a signal the brain broadcasts widely, such as dopamine or a dendritic plateau potential.
+- **Cell counts, wiring and sizes come from anatomy**, and each experiment's protocol fixes them before any run. No size, sparsity or setting is chosen because it makes a test pass.
+- **Decisions use only signals a circuit has.** No step reads a list of the stored memories, compares against an answer key, or uses information no neuron could reach. Where a list-based number helps explain a result, it is logged beside the result and never used to decide.
+- **Predictions are written before the runs**, every readout is reported, and a failed match with people or animals is reported as a result. The only values set to match human data are a few published response rates, named in each protocol.
+
 ## Rules
 
 Every part names its brain region and cell type. Every connection and learning rule follows these rules, or is labelled a stand-in:

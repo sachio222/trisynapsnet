@@ -283,6 +283,52 @@ These results also stood out:
 
 All E3 runs took 62 minutes of process time, at most two at once. Every number is in `results/e3.md`.
 
+## E8: telling a studied drawing from a similar one
+
+E3 found that the fully local hippocampus stores the exact drawing it saw far better than it recognises a new person's drawing of the same character, so one-shot classification mostly measures what the cortex has learned about characters. In people, the hippocampus's job is measured with episodic tasks. The best studied is the Mnemonic Similarity Task (Stark and colleagues, 2013): a person sees a series of pictures once, then sees repeats (the same picture), lures (a similar picture never shown) and foils (new pictures), and answers old, similar or new. Two scores come from the answers. The **lure discrimination index** (LDI), p(similar | lure) − p(similar | foil), measures how often a person tells a similar picture from the one they saw. The **recognition score** (REC), p(old | repeat) − p(old | foil), is ordinary recognition. Young adults score LDI 0.360 and REC 0.786. Lure discrimination falls with age and after damage to the hippocampus, and a patient with damage limited to the dentate gyrus lost it while his recognition stayed normal. E8 builds this test once, so that every later change to the model can be judged on it.
+
+E8 changes nothing in E3's model (perforant path with clipped binary synapses, CA3 settling, one-shot CA1, 2% of cells active). The model studies 20 drawings of different evaluation characters once. Repeats are the same drawings, lures are another person's drawing of a studied character, and foils are characters it never studied. CA1 serves as a comparator: the signal is the cosine between the test drawing's EC code and the EC code CA1 returns, and two thresholds turn it into old, similar or new. The thresholds were set on background alphabets so that the model calls 81.2% of repeats old and 82.0% of foils new, young adults' rates, and every lesion keeps them. Lures are sorted into five bins by their cosine with the studied drawing in the vision code, a stand-in for the bins people's lures are sorted into by how often young adults call them old. Virtual lesions remove DG (the perforant path then drives storage), CA3's recurrent connections, CA3 (CA1 is driven by its direct EC input), half of CA1, or the whole hippocampus, or thin the perforant path to 75%, 50% or 25% of its connections. A baseline decides from the vision codes alone. Lists also grow to 50, 100 and 200 drawings, and hold 2 or 4 drawings of each character. Every choice is in `docs/e8_protocol.md`, and every human finding with its source in `docs/e8_sources.md`.
+
+The predictions, written before the runs:
+
+1. Intact model: LDI falls as lures grow more similar, while REC stays high, as in people.
+2. The hippocampus adds lure discrimination: at the middle similarity bins, the intact model's LDI beats the vision-code baseline by at least 0.10.
+3. Removing DG lowers LDI by more than it lowers REC.
+4. Thinning the perforant path lowers LDI while REC stays near intact, because a weaker cue lets CA3 settle a lure onto the studied drawing; p(old | lure) rises.
+5. Removing CA3's recurrent connections lowers p(old | lure).
+6. LDI falls with load faster than REC.
+
+### E8 results
+
+The model tells lures from studied drawings about as often as young adults overall, by the opposite route, and every prediction failed. On the evaluation alphabets, 20 drawings, 10 seeds:
+
+| | LDI | REC | Old to lures | LDI, most similar lures (L1) | LDI, least similar lures (L5) |
+|---|---|---|---|---|---|
+| Young adults (Stark and colleagues 2013) | 0.360 | 0.786 | 40.3% | not stated in the text | not stated in the text |
+| Intact model | 0.282 | 0.797 | 0% | 0.505 | −0.085 |
+| No CA3 recurrent connections | 0.252 | 0.795 | 0% | 0.410 | −0.053 |
+| No DG | 0.136 | 0.044 | 0% | 0.244 | −0.086 |
+| Perforant path, 50% kept | 0.236 | 0.796 | 0% | 0.424 | −0.077 |
+| Perforant path, 25% kept | 0.180 | 0.777 | 0% | 0.328 | −0.045 |
+| Half of CA1 | 0.291 | 0.717 | 0% | 0.512 | −0.068 |
+| Vision code alone | 0.422 | 0.813 | 0% | 0.764 | −0.081 |
+
+- **Prediction 1 failed.** The model never calls a lure old. The most it can return for a lure is the studied drawing's code, and no evaluation lure comes closer to its studied drawing than a cosine of 0.906, below the old threshold of 0.968. So close lures come out similar and far ones new, and LDI rises as lures grow more similar, from −0.085 in L5 to 0.505 in L1. People call the closest lures old. REC held: 0.797.
+- **Prediction 2 failed.** The vision code alone discriminates better than the hippocampus, 0.422 against 0.282, in all 10 seeds.
+- **Prediction 3 failed with fixed thresholds.** Removing DG halves LDI (0.282 to 0.136, in 10 of 10 seeds), as in the dentate gyrus patient, but it also stops repeats from bringing back a close copy of themselves, so REC falls to 0.044. With thresholds recalibrated for the lesioned model, LDI falls by the same amount and REC stays at 0.824, the patient's pattern.
+- **Prediction 4 failed on its mechanism; its first half held.** LDI falls to 0.270, 0.236 and 0.180 as the perforant path keeps 75%, 50% and 25% of its connections, and REC stays within 0.02 of intact, which matches the direction seen with age (adults aged 60 to 74 score LDI 0.113 and REC 0.774). But no lure is called old, and fewer lures settle onto the studied drawing's pattern, not more: 23.2% at 25% kept against 38.7% intact.
+- **Prediction 5 failed.** No lure is called old with or without CA3's recurrent connections.
+- **Prediction 6 failed.** From 20 to 200 drawings, LDI falls by 0.262 and REC by 0.797. CA1's returned code blends more studied drawings as the list grows, and the median signal for repeats falls from 0.991 to 0.875 at 50 drawings, so repeats drop below the old threshold first.
+
+These results also stood out:
+
+- **In this model, completing a lure to the studied memory makes it say similar.** 38.7% of lures settle exactly onto the studied drawing's pattern; 84.5% of those are called similar and none old. CA1 brings back the studied drawing, and the comparison with the lure shows the difference. In people, that completion is the usual account of calling a lure old.
+- **Settling makes foils look less familiar.** Without it the cue reaches CA1 as a mix of memories and CA1 returns a blend: 47.5% of foils are called similar, against 23.8% with settling.
+- **Half of CA1 lowers recognition but not discrimination** (REC 0.717, LDI 0.291). Patients with transient CA1 lesions lost both (Hanert and colleagues, 2019).
+- **More drawings of one character raise discrimination.** With 2 and 4 drawings per character, LDI rises to 0.415 and 0.587: a lure then resembles several studied drawings and is more often called similar.
+
+The model's old answer covers only exact repeats: to be called old, a lure would need a cosine above 0.968 with its studied drawing in the vision code. Every number is in `results/e8.md`, and the figures are `figures/e8_ldi_by_bin.pdf` and `figures/e8_load.pdf`. All E8 runs, background and evaluation, took 82 minutes of process time, at most two at once.
+
 ## Install
 
 Clone this repo next to aha4, so that `../aha4/checkpoints/vc_pretrained.pth.tar` and `../aha4/data` exist. aha4's `evaluate.py` downloads the data on its first run.
@@ -416,6 +462,24 @@ PYTHON=.venv/bin/python scripts/run_e3.sh status
 python scripts/make_e3_table.py
 ```
 
+## Run E8
+
+The vision codes of every drawing are encoded once and cached in `data/cache`. One list size, every arm, on background or evaluation alphabets:
+
+```
+python -m trisynapsnet.eval.behaviour --split background --load 20 --seeds 10
+python -m trisynapsnet.eval.behaviour --split evaluation --load 100 --arms intact no_recurrent no_ca3 vc_baseline
+```
+
+A result file holds every test item's signal, so thresholds can be applied afterwards; it is written after every seed, and a rerun picks up after the last finished seed. The whole experiment, then `results/e8.md` and the figures. Phase A, on background alphabets, gives the runs the thresholds and lure bins come from:
+
+```
+PYTHON=.venv/bin/python scripts/run_e8.sh A
+python scripts/make_e8_table.py --calibrate
+PYTHON=.venv/bin/python JOBS=2 scripts/run_e8.sh B   # then C and D
+python scripts/make_e8_table.py
+```
+
 ## Layout
 
 ```
@@ -430,8 +494,9 @@ trisynapsnet/eval/endtoend.py   E1c: the full model studying many drawings at on
 trisynapsnet/eval/sparsecodes.py  E1d: E1c's CA3 test at sparser codes and larger loads
 trisynapsnet/eval/ca1space.py   E4: CA1 on its own, returning EC codes against load
 trisynapsnet/eval/perforant.py  E3: every arm, PR or perforant path, with and without settling
-scripts/                        E1 to E1d, E3 and E4 drivers, table and figure builders
-docs/                           E1b's, E1c's, E1d's, E3's and E4's protocols
+trisynapsnet/eval/behaviour.py  E8: similar-lure recognition, load, interference and virtual lesions
+scripts/                        E1 to E1d, E3, E4 and E8 drivers, table and figure builders
+docs/                           E1b's, E1c's, E1d's, E3's, E4's and E8's protocols, and E8's sources
 ```
 
 Code adapted from aha4 says so at the top of each file.

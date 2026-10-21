@@ -50,3 +50,12 @@ def test_evaluate_records_no_absolute_paths(tmp_path):
     assert recorded["out"] == "results/y.json"
     text = json.dumps(recorded)
     assert str(omniglot.REPO) not in text and "/Users/" not in text
+
+
+def test_evaluate_records_cache_dir_without_absolute_path():
+    # The merge of E1d and E4 left two recorded_args; the later one dropped
+    # cache_dir, so an absolute --cache-dir reached the result file.
+    args = evaluate.parse_args(["--cache-dir", str(omniglot.REPO / "data" / "cache")])
+    recorded = evaluate.recorded_args(args)
+    assert recorded["cache_dir"] == "data/cache"
+    assert "/Users/" not in json.dumps(recorded)

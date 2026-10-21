@@ -206,6 +206,27 @@ def load_table(records, stage, direction, arms, kind):
     return "\n".join(lines)
 
 
+def load_effect_table(records, stage, direction, kind, pairs=PAIRS[:3]):
+    """Settling minus no settling per load: mean over seeds, seeds where it helps."""
+    first = next(r for r in records.values() if r)
+    idx = [i for i, lv in enumerate(first["levels"]) if lv["kind"] in ("none", kind)]
+    labels = [level_label(first["levels"][i]) for i in idx]
+    lines = ["| Load | Pair | " + " | ".join(labels) + " |", "|" + "---|" * (2 + len(labels))]
+    for load_n, rec in records.items():
+        if rec is None:
+            continue
+        for a, b in pairs:
+            row = [str(load_n), ARM_NAMES[a]]
+            for i in idx:
+                store = rec["per_seed"][i]
+                diffs = [100 * (x - y) for x, y in zip(store["{} {} {}".format(a, stage, direction)],
+                                                      store["{} {} {}".format(b, stage, direction)])]
+                row.append("{:+.1f} ({}/{})".format(statistics.mean(diffs),
+                                                    sum(x > 0 for x in diffs), len(diffs)))
+            lines.append("| " + " | ".join(row) + " |")
+    return "\n".join(lines)
+
+
 def load_metric_table(records, metric, arms, kind):
     first = next(r for r in records.values() if r)
     idx = [i for i, lv in enumerate(first["levels"]) if lv["kind"] in ("none", kind)]
@@ -304,6 +325,12 @@ def dump(k=5):
             for d in DIRECTIONS:
                 out += ["## Load, CA3, {} {}".format(kind, d), "",
                         load_table(loads, "ca3", d, arms, kind), ""]
+            for d in DIRECTIONS:
+                out += ["## Load, CA1, {} {}".format(kind, d), "",
+                        load_table(loads, "ca1", d, arms, kind), ""]
+            for stage in ("ca3", "ca1"):
+                out += ["## Load, settling effect, {}, {} test-to-study".format(stage, kind), "",
+                        load_effect_table(loads, stage, "test-to-study", kind), ""]
             out += ["## Load, exact recall, {}".format(kind), "",
                     load_metric_table(loads, "exact", arms, kind), "",
                     "## Load, right cells in cue, {}".format(kind), "",

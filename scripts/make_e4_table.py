@@ -262,11 +262,12 @@ def plot(rows, path):
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
+    import matplotlib.ticker
     colours = {"btsp_human": "#2a78d6", "btsp_rat": "#5a9be3", "backprop_ec": "#eb6834",
                "backprop_ec_scaled": "#f2a07c", "backprop_ec_nol2": "#a33f15",
                "pm_pixels": "#1baf7a", "pm_pixels_nol2": "#0f6e4c", "mean": "#3d3d3a"}
     loads = list(rows)
-    fig, axes = plt.subplots(1, 2, figsize=(10, 4))
+    fig, axes = plt.subplots(1, 2, figsize=(10, 4.8))
     for ax, metric, label in ((axes[0], "ident", "Identification, exact pattern"),
                               (axes[1], "cos", "Cosine to the right code")):
         for arm in colours:
@@ -280,11 +281,13 @@ def plot(rows, path):
         ax.set_xscale("log")
         ax.set_xticks(loads)
         ax.set_xticklabels([str(l) for l in loads])
+        ax.xaxis.set_minor_formatter(matplotlib.ticker.NullFormatter())
         ax.set_xlabel("Drawings stored")
         ax.set_title(label)
         ax.grid(alpha=0.3)
-    axes[0].legend(fontsize=7, loc="lower left")
-    fig.tight_layout()
+    handles, labels = axes[0].get_legend_handles_labels()
+    fig.legend(handles, labels, fontsize=7, loc="lower center", ncol=4, frameon=False)
+    fig.tight_layout(rect=(0, 0.12, 1, 1))
     path.parent.mkdir(exist_ok=True)
     fig.savefig(path)
     plt.close(fig)
@@ -294,6 +297,7 @@ def plot_partial(rows, path):
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
+    import matplotlib.ticker
     loads = list(rows)
     fig, axes = plt.subplots(1, 2, figsize=(10, 4), sharey=True)
     for ax, arm in zip(axes, ("btsp_human", "backprop_ec_nol2")):
@@ -308,6 +312,7 @@ def plot_partial(rows, path):
         ax.set_xscale("log")
         ax.set_xticks(loads)
         ax.set_xticklabels([str(l) for l in loads])
+        ax.xaxis.set_minor_formatter(matplotlib.ticker.NullFormatter())
         ax.set_xlabel("Drawings stored")
         ax.set_title(ARM_NAMES[arm])
         ax.grid(alpha=0.3)
@@ -316,6 +321,172 @@ def plot_partial(rows, path):
     fig.tight_layout()
     fig.savefig(path)
     plt.close(fig)
+
+
+def ident(rows, load_n, arm, inp="exact"):
+    return 100 * rows[load_n]["arms"][arm][inp]["ident"]["summary"]["mean"]
+
+
+def verdicts(rows):
+    """The four predictions, written before the runs, each against every
+    baseline, with the numbers that decide it."""
+    out = ["## Predictions", "",
+           "Written in the plan before the runs. The plan names one baseline: a backpropagation "
+           "network trained as PM is trained, with the EC code as its target "
+           "(`backprop_ec`). It sits at chance at every load, because PM's L2 penalty outweighs "
+           "the error signal when the target is an EC code, about 19 times smaller than pixels. "
+           "A comparison with it tells nothing about BTSP, so each prediction is also judged "
+           "against the same network without its L2 penalty, the informative comparison, and "
+           "with the EC target scaled up 19.3 times, as a check. Identification from the exact "
+           "stored pattern, percent.", ""]
+    bl = (("backprop_ec", "PM's training (as planned)"), ("backprop_ec_nol2", "no L2 penalty"),
+          ("backprop_ec_scaled", "target scaled 19.3x"))
+    out += ["| Load | BTSP, 2,118 cells | BTSP, 375 cells | " + " | ".join(
+        "Backprop, " + b for _, b in bl) + " |", "|---" * 6 + "|"]
+    for load_n in (20, 50, 100, 200):
+        if load_n in rows:
+            out.append("| {} | {:.1f} | {:.1f} | ".format(load_n, ident(rows, load_n, "btsp_human"),
+                                                          ident(rows, load_n, "btsp_rat")) +
+                       " | ".join("{:.1f}".format(ident(rows, load_n, a)) for a, _ in bl) + " |")
+    out.append("")
+
+    def held(x):
+        return "held" if x else "failed"
+
+    def p1(arm, a):
+        # Compared at the table's precision, so 97.0 against 100.0 counts as 3.0 points.
+        return round(abs(ident(rows, 20, arm) - ident(rows, 20, a)), 1) <= 3.0
+
+    def p2(arm, a):
+        return all(ident(rows, n, arm) > ident(rows, n, a) for n in (100, 200))
+
+    h, r = "btsp_human", "btsp_rat"
+    f = lambda arm, n=20, inp="exact": "{:.1f}".format(ident(rows, n, arm, inp))
+    lines = [
+        "**Prediction 1.** At 20 drawings, BTSP CA1 identifies the right drawing as often as the "
+        "baseline, within 3 points, after one presentation.",
+        "",
+        "- Against the planned baseline: {} at both sizes in the letter, and uninformative. BTSP "
+        "scores {} (2,118 cells) and {} (375 cells); the planned baseline scores {}, chance, so "
+        "BTSP is far more than 3 points ahead.".format(
+            held(p1(h, "backprop_ec") and p1(r, "backprop_ec")), f(h), f(r), f("backprop_ec")),
+        "- Against backpropagation without the L2 penalty, the informative comparison: {} at "
+        "2,118 cells ({} against {}) and {} at 375 cells ({} against {}, a gap of exactly 3.0 "
+        "points at the table's precision).".format(
+            held(p1(h, "backprop_ec_nol2")), f(h), f("backprop_ec_nol2"),
+            held(p1(r, "backprop_ec_nol2")), f(r), f("backprop_ec_nol2")),
+        "- Against the scaled target, as a check: {}; that network scores {}, so BTSP is far "
+        "ahead.".format(held(p1(h, "backprop_ec_scaled") and p1(r, "backprop_ec_scaled")),
+                        f("backprop_ec_scaled")),
+        "",
+        "**Prediction 2.** Past 50 drawings BTSP holds up better: higher identification at 100 "
+        "and 200 drawings.",
+        "",
+        "- Against the planned baseline: held at both sizes, and uninformative, since that "
+        "network is at chance at every load.",
+        "- Against backpropagation without the L2 penalty: {} at 2,118 cells ({} and {} against "
+        "{} and {}); {} at 375 cells, which is lower at 100 drawings ({} against {}) and level "
+        "at 200 ({} against {}).".format(
+            held(p2(h, "backprop_ec_nol2")), f(h, 100), f(h, 200), f("backprop_ec_nol2", 100),
+            f("backprop_ec_nol2", 200), held(p2(r, "backprop_ec_nol2")), f(r, 100),
+            f("backprop_ec_nol2", 100), f(r, 200), f("backprop_ec_nol2", 200)),
+        "- Against the scaled target: held at both sizes; that network is at chance from 50 "
+        "drawings on.",
+        "- PM itself, rebuilding pixels without its L2 penalty, identifies 100% up to 200 "
+        "drawings (table below). That readout is in pixel space, so it does not enter the "
+        "verdicts, but backpropagation is not limited to the numbers in this table.",
+        "",
+    ]
+    out += lines
+    out += prediction_3(rows, f) + prediction_4() + other_findings(rows)
+    return out
+
+
+def other_findings(rows):
+    e1c = load("e1c_ca3_drawings_evaluation_covariance_225_10")
+    pm = lambda n, arm, m: rows[n]["arms"][arm]["exact"][m]["summary"]["mean"]
+    out = ["## Other findings", "",
+           "- **PM's rising error floor comes from its L2 penalty.** E1c found that CA1's error "
+           "from the exact stored pattern rises from 0.0046 at 20 drawings to 0.0363 at 100, and "
+           "read it as CA1's capacity. The same network with the same 60 steps but no L2 penalty "
+           "scores {:.4f} at 20 drawings, {:.4f} at 100 and {:.4f} at 500, and identifies "
+           "{:.1f}% of drawings at 500. With the penalty it identifies {:.1f}% at 100.".format(
+               pm(20, "pm_pixels_nol2", "mse"), pm(100, "pm_pixels_nol2", "mse"),
+               pm(500, "pm_pixels_nol2", "mse"), 100 * pm(500, "pm_pixels_nol2", "ident"),
+               100 * pm(100, "pm_pixels", "ident"))]
+    rows1000, _ = merged(1000)
+    if rows1000:
+        g = lambda n, arm: 100 * rows1000[n]["arms"][arm]["exact"]["ident"]["summary"]["mean"]
+        out.append("- **A larger CA3 helps BTSP far more than backpropagation.** At 1,000 CA3 "
+                   "cells with 44 active, BTSP with 9,412 CA1 cells identifies {:.1f}% at 200 "
+                   "drawings and {:.1f}% at 500; backpropagation without the L2 penalty "
+                   "identifies {:.1f}% and {:.1f}%. Each BTSP cell then sees 44 active inputs "
+                   "instead of 10.".format(g(200, "btsp_human"), g(500, "btsp_human"),
+                                           g(200, "backprop_ec_nol2"), g(500, "backprop_ec_nol2")))
+    out.append("- **Matching can score a network that returns almost nothing.** The planned "
+               "baseline is at chance at identifying drawings from their CA3 patterns, yet its "
+               "CA1 stage scores 53.5% on Lake's runs, close to CA3's 53.8%. Normalised matching "
+               "compares the network's outputs for study and test drawings with each other, and "
+               "the small differences between near-constant outputs still follow the CA3 "
+               "states.")
+    out.append("")
+    return out
+
+
+def prediction_3(rows, f):
+    cov = "covariance {} 0 settled"
+    ca3 = lambda n, r: 100 * rows[n]["ca3_exact"][cov.format(r)]["mean"]
+    h, r = "btsp_human", "btsp_rat"
+    return [
+        "**Prediction 3.** With CA3 completing partial cues, BTSP CA1's output from a partial "
+        "cue approaches its output from the exact pattern, below CA3's capacity.",
+        "",
+        "- Held at both sizes. At 2,118 cells and 20 drawings, BTSP identifies {} from the exact "
+        "pattern; from cues missing 40% or 80% of their active cells it identifies {} and {} "
+        "after covariance-rule settling, against {} and {} from the raw cue. At 50 drawings: {} "
+        "exact, {} and {} after settling, {} and {} raw. At 375 cells and 20 drawings: {} exact, "
+        "{} and {} after settling.".format(
+            f(h), f(h, 20, cov.format(0.4)), f(h, 20, cov.format(0.8)), f(h, 20, "cue 0.4 0"),
+            f(h, 20, "cue 0.8 0"), f(h, 50), f(h, 50, cov.format(0.4)), f(h, 50, cov.format(0.8)),
+            f(h, 50, "cue 0.4 0"), f(h, 50, "cue 0.8 0"), f(r), f(r, 20, cov.format(0.4)),
+            f(r, 20, cov.format(0.8))),
+        "- The gap opens as CA3 nears capacity and follows CA3's exact recall. At 100 drawings "
+        "with 80% removed, CA3 recalls {:.1f}% of cues exactly and BTSP identifies {} after "
+        "settling against {} exact. At 200 drawings, past CA3's capacity, settling hurts: {} "
+        "after settling against {} from the raw cue with 40% removed.".format(
+            ca3(100, 0.8), f(h, 100, cov.format(0.8)), f(h, 100), f(h, 200, cov.format(0.4)),
+            f(h, 200, "cue 0.4 0")),
+        "- The completion comes from CA3: backpropagation without the L2 penalty gains the same "
+        "way, from {} raw to {} after settling at 20 drawings with 80% removed.".format(
+            f("backprop_ec_nol2", 20, "cue 0.8 0"), f("backprop_ec_nol2", 20, cov.format(0.8))),
+        "",
+    ]
+
+
+def prediction_4():
+    out = ["**Prediction 4.** CA1-stage accuracy on Lake's runs stays within 3 points of the "
+           "CA3 stage.", ""]
+    parts = []
+    worst = 0.0
+    for arm, label in (("btsp_human", "2,118 cells"), ("btsp_rat", "375 cells")):
+        for match in ("study-to-test", "test-to-study"):
+            sc = stage_scores("e4_classification_official_covariance_225_10_" + arm, match)
+            if not sc:
+                return out + ["- Not run.", ""]
+            st = sc[0.0]
+            d = 100 * (st["pm"] - st["pc"])
+            worst = max(worst, abs(d))
+            parts.append("{} {}: {:.1f} against {:.1f} ({:+.1f})".format(
+                label, match, 100 * st["pm"], 100 * st["pc"], d))
+    out.append("- {} at both sizes and in both matching directions; the largest gap is {:.1f} "
+               "points. CA1 against CA3: {}.".format("Held" if worst <= 3 else "Failed", worst,
+                                                     "; ".join(parts)))
+    out.append("- On the instance task, 2,118-cell BTSP stays within 1.4 points of CA3 at every "
+               "level. 375-cell BTSP loses up to 7.1 points, most on clean and lightly occluded "
+               "drawings, where the 20 drawings are all of one character and their EC codes are "
+               "alike.")
+    out.append("")
+    return out
 
 
 def build():
@@ -329,6 +500,7 @@ def build():
                 "exact stored CA3 pattern. Plateau share {:g} at 2,118 CA1 cells and {:g} at 375. "
                 "PM is scored against the stored drawings' pixels, every other arm against the "
                 "stored EC codes.".format(*shares))
+        lines += verdicts(rows)
         lines += load_table(rows, arms, "ident", "Identification against load, percent", note)
         lines += load_table(rows, arms, "cos", "Cosine similarity against load",
                             "Same runs. Cosine between the returned code and the right drawing's.")

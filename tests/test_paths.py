@@ -32,7 +32,7 @@ def test_aha4_can_live_anywhere(tmp_path, monkeypatch):
             "../aha4/checkpoints/vc_pretrained.pth.tar"
         assert moved.portable(elsewhere / "data" / "omniglot-runs") == "../aha4/data/omniglot-runs"
     finally:
-        monkeypatch.delenv("TSN_AHA4")
+        monkeypatch.undo()  # puts back any TSN_AHA4 set before the test
         importlib.reload(omniglot)
 
 

@@ -61,9 +61,9 @@ evaluate() {
 case $PHASE in
 A)
     # shellcheck disable=SC2086
-    ca1 e4_select_background_225_centred --split background --seeds 5 --shares $SHARES --no-pixels
+    ca1 e4_ca1_background_225_10_q0.0025_0.005_0.01_0.02_0.05 --split background --seeds 5 --shares $SHARES --no-pixels
     # shellcheck disable=SC2086
-    ca1 e4_select_background_225_raw --split background --seeds 5 --shares $SHARES --no-pixels \
+    ca1 e4_ca1_background_225_10_q0.0025_0.005_0.01_0.02_0.05_raw --split background --seeds 5 --shares $SHARES --no-pixels \
         --ec3-baseline none
     ;;
 B)

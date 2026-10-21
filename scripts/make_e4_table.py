@@ -51,8 +51,8 @@ def mean_over(row, arm, inputs, metric="ident"):
 def select():
     """Prints the background choice: per drive baseline and CA1 size, the
     selection score of each plateau share, and the winners."""
-    files = {"background mean": "e4_select_background_225_centred",
-             "raw": "e4_select_background_225_raw"}
+    files = {"background mean": "e4_ca1_background_225_10_q0.0025_0.005_0.01_0.02_0.05",
+             "raw": "e4_ca1_background_225_10_q0.0025_0.005_0.01_0.02_0.05_raw"}
     best = {}
     lines = ["Selection score: identification averaged over loads and 17 inputs "
              "(background alphabets, 5 seeds).", ""]
@@ -74,7 +74,7 @@ def select():
             i = max(range(len(shares)), key=lambda j: scores[j])
             best[(baseline, ratio)] = (shares[i], scores[i])
             lines.append("| {} ({} cells) | ".format(ratio, rec["ca1_units"][ratio]) + " | ".join(
-                "{:.3f}".format(s) for s in scores) + " |")
+                "{:.4f}".format(s) for s in scores) + " |")
         lines.append("")
     for (baseline, ratio), (share, score) in best.items():
         lines.append("best for {} drive, {}: share {:g} ({:.3f})".format(baseline, ratio, share, score))

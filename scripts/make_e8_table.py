@@ -324,15 +324,58 @@ def predictions(ev, loads):
     return out
 
 
+def signal_tables(cal):
+    """The intact model's signal by load, lure similarity, and lures' answers
+    split by whether CA3 settled onto the studied drawing's pattern."""
+    thr = cal["thresholds"]["intact"]
+    parts = ["### The intact model's signal, evaluation alphabets", "",
+             "Median cosine between the test drawing's EC code and the code CA1 returns, mean "
+             "over seeds of each seed's median. θ_old is {:.4f}, θ_new {:.4f}.".format(
+                 thr["old"], thr["new"]), "",
+             "| Drawings studied | Repeats | Lures | Foils |", "|---|---|---|---|"]
+    for load in LOADS:
+        record = load_file("evaluation", load, 1)
+        if record is None:
+            continue
+        med = {t: [] for t in range(3)}
+        for items in record["per_seed"].values():
+            types = torch.tensor(items["types"])
+            s = floats(items["signal"]["intact"])
+            for t in range(3):
+                med[t].append(s[types == t].median().item())
+        parts.append("| {} | {} |".format(load, " | ".join(
+            "{:.3f}".format(statistics.mean(med[t])) for t in range(3))))
+    record = load_file("evaluation", 20, 1)
+    types = torch.tensor(pooled(record, "types"))
+    sim = floats(pooled(record, "similarity"))[types == 1]
+    s = floats(pooled(record, None, "intact"))
+    exact = torch.tensor([v for seed in sorted(record["per_seed"], key=int)
+                          for v in record["per_seed"][seed]["ca3"]["intact"]["exact_paired"]])
+    p = bh.respond(s, thr)
+    rows = []
+    for label, sel in (("settled onto the studied drawing's pattern", (types == 1) & (exact == 1)),
+                       ("settled elsewhere", (types == 1) & (exact == 0))):
+        m = p[sel].mean(dim=0)
+        rows.append("| Lures {} | {} | {:.3f} | {:.1f} | {:.1f} | {:.1f} |".format(
+            label, int(sel.sum()), s[sel].median().item(), 100 * m[0], 100 * m[1], 100 * m[2]))
+    parts += ["", "Lures at 20 drawings, all seeds pooled: the largest cosine between a lure's EC "
+              "code and its studied drawing's is {:.3f}, the 99th percentile {:.3f}.".format(
+                  sim.max().item(), torch.quantile(sim, 0.99).item()), "",
+              "| Lures | Count | Median signal | Old | Similar | New |", "|---|---|---|---|---|---|"]
+    parts += rows + [""]
+    return parts
+
+
 # ---------------------------------------------------------------- figures
 
 def figures(ev, loads):
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
+    import matplotlib.ticker
 
     FIGURES.mkdir(exist_ok=True)
-    fig, ax = plt.subplots(figsize=(7, 4.6))
+    fig, ax = plt.subplots(figsize=(9.5, 4.6))
     x = list(range(1, 6))
     for arm in ("intact", "no_recurrent", "no_ca3", "no_dg", "pp_keep0.5", "pp_keep0.25",
                 "ca1_half", "vc_baseline"):
@@ -350,7 +393,7 @@ def figures(ev, loads):
     ax.set_xticklabels(["L1\nmost similar", "L2", "L3", "L4", "L5\nleast similar"])
     ax.set_ylabel("LDI = p(similar | lure) − p(similar | foil)")
     ax.set_title("Lure discrimination by similarity bin, evaluation alphabets, 20 drawings")
-    ax.legend(fontsize=7, loc="upper left")
+    ax.legend(fontsize=7, loc="upper left", bbox_to_anchor=(1.01, 1.0))
     fig.tight_layout()
     fig.savefig(FIGURES / "e8_ldi_by_bin.pdf")
     plt.close(fig)
@@ -371,6 +414,7 @@ def figures(ev, loads):
         ax.set_xscale("log")
         ax.set_xticks(have)
         ax.set_xticklabels([str(n) for n in have])
+        ax.xaxis.set_minor_formatter(matplotlib.ticker.NullFormatter())
         ax.set_xlabel("Drawings studied per list")
         ax.set_ylabel(label)
     axes[0].legend(fontsize=7)
@@ -454,6 +498,8 @@ def main():
                 c, d = seeds_where(ev[arm]["rec"], ev["intact"]["rec"], lambda x, y: x < y)
                 parts.append("| {} | {} of {} | {} of {} |".format(ARM_NAMES[arm], a, b, c, d))
         parts.append("")
+    if ev:
+        parts += signal_tables(cal)
     conds_eval = ([("{} drawings".format(n), name("evaluation", n, 1)) for n in LOADS]
                   + [("20 drawings, {} per character".format(d), name("evaluation", 20, d))
                      for d in (2, 4)])

@@ -76,7 +76,8 @@ EMAX_GRID = (None, 0.1, 0.2, 0.3, 0.5)
 # A partial result file resumes only when these arguments match.
 RESUME_KEYS = ("task", "runs", "load", "levels", "kinds", "first_seed", "runs_seed",
                "corruption_seed", "dg_k", "dg_units", "ca1_units", "ca1_plateau_share",
-               "wil_presynaptic", "wil_normalise", "wil_emax", "cov_normalise", "cov_emax", "grid")
+               "wil_presynaptic", "wil_normalise", "wil_emax", "cov_normalise", "cov_emax", "grid",
+               "pp_share")
 
 
 def runs_per_seed(load):
@@ -282,6 +283,8 @@ def build_parser():
                        choices=list(modules.PP_PRESYNAPTIC))
         p.add_argument("--{}-normalise".format(tag), action="store_true")
         p.add_argument("--{}-emax".format(tag), type=float, default=None)
+    p.add_argument("--pp-share", type=float, default=modules.PP_SHARE,
+                   help="share of EC units each CA3 cell connects to; 1 connects every unit")
     p.add_argument("--grid", action="store_true", help="score every perforant setting, CA3 only")
     p.add_argument("--device", default="auto")
     p.add_argument("--threads", type=int, default=2)
@@ -296,9 +299,9 @@ def build_parser():
 def settings_from(args):
     return {
         "willshaw": {"presynaptic": args.wil_presynaptic, "normalise": args.wil_normalise,
-                     "emax": args.wil_emax},
+                     "emax": args.wil_emax, "share": args.pp_share},
         "covariance": {"presynaptic": "positive", "normalise": args.cov_normalise,
-                       "emax": args.cov_emax},
+                       "emax": args.cov_emax, "share": args.pp_share},
     }
 
 
@@ -438,8 +441,8 @@ def main(argv=None):
             "config": asdict(config),
             "settings": None if args.grid else settings,
             "grid": {name: [rule, kw] for name, (rule, kw) in grid.items()} if grid else None,
-            "in_degree": modules._round_half_up(modules.PP_SHARE * aha.in_dim),
-            "connection_share": modules.PP_SHARE,
+            "in_degree": min(aha.in_dim, modules._round_half_up(args.pp_share * aha.in_dim)),
+            "connection_share": args.pp_share,
             "levels": [{"kind": kind, "level": level} for kind, level in levels],
             "matching": "normalised minimum MSE",
             "seeds_done": sorted(done),

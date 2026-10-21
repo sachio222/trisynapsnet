@@ -125,3 +125,7 @@ Written before any E3 run:
 
 32. **Persistent EC input during settling.** Treves and Rolls's scheme lets the perforant input keep driving CA3 while it settles. E3 keeps E1's cue weight of 0 so that settling is the only change between arms.
 33. **Measured count instead of share.** Keeping 3,750 inputs per CA3 cell (18% of the model's EC) is E2's question, together with the other wiring densities.
+
+## Added after the runs
+
+34. **Full connectivity, a diagnostic.** After phases A to E, one run on the background validation runs (5 seeds, the chosen settings) connects every CA3 cell to all 20,449 EC units, to separate the cost of sparse wiring from the cost of the one-shot rule on new drawings. It changes no reported setting and touches no evaluation alphabet. File: `results/e3_classification_background_225_5_share1.json`.

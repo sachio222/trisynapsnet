@@ -180,3 +180,13 @@ def test_grid_scores_every_setting_without_study():
     for d in perforant.DIRECTIONS:
         assert s["cov_raw_kwta none " + d] == full["pp_cov_none ca3 " + d]
         assert s["wil_pos_raw_kwta settle " + d] == full["pp_wil ca3 " + d]
+
+
+def test_share_option_reaches_the_perforant_path():
+    args = perforant.build_parser().parse_args(["--pp-share", "1"])
+    settings = perforant.settings_from(args)
+    pp = modules.PerforantPath(20449, 225, 5, "willshaw", **settings["willshaw"])
+    assert pp.in_degree == 20449
+    default = perforant.settings_from(perforant.build_parser().parse_args([]))
+    pp = modules.PerforantPath(20449, 225, 5, "willshaw", **default["willshaw"])
+    assert pp.in_degree == 710

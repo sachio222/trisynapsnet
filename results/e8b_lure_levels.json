@@ -1,0 +1,56 @@
+{
+ "experiment": "e8b levels",
+ "split": "background",
+ "drawings": 1000,
+ "closest_edge": 0.66339,
+ "targets": [
+  0.9663390000000001,
+  0.899017,
+  0.8316950000000001,
+  0.764373,
+  0.6970510000000001
+ ],
+ "distortion": {
+  "rotation_deg": 15.0,
+  "scale": 0.15,
+  "shear": 0.15,
+  "elastic_px": 2.0,
+  "elastic_sigma_px": 4.0,
+  "image_size": 52
+ },
+ "identity_median_cosine": 1.0000001192092896,
+ "levels": [
+  {
+   "target": 0.9663390000000001,
+   "magnitude": 0.006145477294921875,
+   "median_cosine": 0.9664092659950256,
+   "reached": true
+  },
+  {
+   "target": 0.899017,
+   "magnitude": 0.037525177001953125,
+   "median_cosine": 0.8993359208106995,
+   "reached": true
+  },
+  {
+   "target": 0.8316950000000001,
+   "magnitude": 0.11161422729492188,
+   "median_cosine": 0.8317058086395264,
+   "reached": true
+  },
+  {
+   "target": 0.764373,
+   "magnitude": 0.3395347595214844,
+   "median_cosine": 0.7642986178398132,
+   "reached": true
+  },
+  {
+   "target": 0.6970510000000001,
+   "magnitude": 0.5348167419433594,
+   "median_cosine": 0.6971269249916077,
+   "reached": true
+  }
+ ],
+ "machine": "macOS-27.0-arm64-arm-64bit",
+ "torch": "2.14.0"
+}

@@ -27,6 +27,8 @@ in a git worktree. Result files still record the standard layout,
 import hashlib
 import os
 import random
+import shutil
+import tempfile
 import urllib.request
 import zipfile
 from pathlib import Path
@@ -135,12 +137,49 @@ def parse_class_labels(lines):
 
 
 def _safe_extract(archive, folder):
+    """Unpacks archive into folder, safely when several jobs do it at once.
+
+    The archive goes into a temporary folder beside its destination first,
+    and each top-level entry then moves into place with one rename. A
+    rename either puts a whole entry in place or finds that another job
+    already did, so no job trips over another's half-written files and no
+    job sees a partial folder.
+    """
+    folder = Path(folder)
+    folder.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(archive) as z:
         for name in z.namelist():
             # Refuse anything that would unpack outside the folder.
             if name.startswith("/") or ".." in Path(name).parts:
                 raise RuntimeError("Unsafe path in archive: {}".format(name))
-        z.extractall(folder)
+        scratch = Path(tempfile.mkdtemp(prefix=".unpacking-", dir=folder))
+        try:
+            z.extractall(scratch)
+            for entry in sorted(scratch.iterdir()):
+                target = folder / entry.name
+                try:
+                    os.rename(entry, target)
+                except OSError:
+                    # Another job put this entry in place first.
+                    if not target.exists():
+                        raise
+        finally:
+            shutil.rmtree(scratch, ignore_errors=True)
+
+
+def _download(url, archive):
+    """Downloads url to archive through a temporary file, so a job never
+    sees another job's half-downloaded archive."""
+    archive = Path(archive)
+    fd, part = tempfile.mkstemp(prefix=".downloading-", dir=archive.parent)
+    os.close(fd)
+    try:
+        print("Downloading {}".format(url))
+        urllib.request.urlretrieve(url, part)
+        os.replace(part, archive)
+    finally:
+        if os.path.exists(part):
+            os.remove(part)
 
 
 def download_runs(root=DEFAULT_DATA):
@@ -152,8 +191,7 @@ def download_runs(root=DEFAULT_DATA):
     folder.mkdir(parents=True, exist_ok=True)
     archive = folder / "all_runs.zip"
     if not archive.is_file():
-        print("Downloading {}".format(RUNS_URL))
-        urllib.request.urlretrieve(RUNS_URL, archive)
+        _download(RUNS_URL, archive)
 
     digest = hashlib.sha256(archive.read_bytes()).hexdigest()
     if digest != RUNS_SHA256:
@@ -178,9 +216,7 @@ def download_alphabets(split, root=LOCAL_DATA):
     folder.parent.mkdir(parents=True, exist_ok=True)
     archive = folder.parent / "images_{}.zip".format(split)
     if not archive.is_file():
-        url = ALPHABETS_URL.format(split)
-        print("Downloading {}".format(url))
-        urllib.request.urlretrieve(url, archive)
+        _download(ALPHABETS_URL.format(split), archive)
 
     digest = hashlib.sha256(archive.read_bytes()).hexdigest()
     if digest != ALPHABETS_SHA256[split]:

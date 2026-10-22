@@ -444,6 +444,61 @@ These results also stood out:
 
 The background run, with seeds 0 to 9, reproduced E8b's R1 and R2 signals exactly (largest difference 0.0). Every number is in `results/e8c.md`. The background and evaluation runs took about 46 minutes each, one after the other, each under 3.7 GB resident, and the evaluation lists were scored once.
 
+## E9: DG drives CA3 at recall as well as at storage
+
+In E8b and E8c, DG took part only in storage: at study it imposed each drawing's pattern on CA3 through the mossy fibres, and at test only the perforant path drove CA3, for one round. Recordings contradict a silent DG at test. In rats, DG and CA3 recorded together during a test both responded, DG separating and CA3 completing (Neunuebel and Knierim 2014), and human DG holds distinct representations of similar scenes (Berron and colleagues 2016). Silencing DG at recall impairs mice when similar contexts must be told apart (Bernier and colleagues 2017). Against it, the classic models of CA3's two inputs argue that mossy input should be weak or absent at retrieval, or pattern completion suffers (Treves and Rolls 1992; O'Reilly and McClelland 1994). E9 asks what CA3 does when DG drives it at recall at measured strength. It changes the input CA3 receives during attractor dynamics and adds no readout.
+
+1. **DG responds to the test drawing** through the same fixed weights as at study, with AHA's record of recently active granule cells frozen at the end of study, so test items do not affect one another. The record is AHA's stand-in, with no measured counterpart, and it partly inhibits the last drawings studied.
+2. **Inputs in units of one potentiated recurrent synapse.** Mossy input at 17.1 units, a mossy synapse's somatic potential over a recurrent one's (9.6 mV over 0.56 mV), with 1.9 units, the ratio of peak conductances (1 nS over 0.54 nS), as a lower bound. EC input stays on at 0.61 units per potentiated perforant synapse, from a model fitted to measured currents. All three are rat values.
+3. **Timing.** The perforant path alone sets the starting state, since direct entorhinal excitation of CA3 comes before the trisynaptic volleys (Yeckel and Berger 1990), so R3 is unchanged by design. DG's and EC's input join from the first round of attractor dynamics on, and 68 CA3 cells stay active in every round.
+4. **Four conditions** recalled from each study: E8c's model (a reproduction control), an EC-on control (H1 to H3 compare against it), DG at 1.9 units and DG at 17.1 units (the main condition). Every arm of E8c runs in each, with both lure sets.
+5. **Test set.** E8b's and E8c's lists left only 6 evaluation drawings unused, so E9 uses every evaluation drawing with new seeds (200 to 209), lists, wiring and distortions. It is a new sample of the same population.
+
+Thresholds come from background alphabets as in E8c, and the run script stops before the evaluation run unless E8c's model equals E8c's background signals and thresholds and R3 is the same in every condition. Every choice is in `docs/e9_protocol.md`, and the sources, with quotes and locations, in `docs/e9_sources.md`.
+
+The predictions, written before the runs (exact wording in the protocol). H1 to H3 come from the research proposal E9 follows and are scored supported (the alternative holds), falsified (the null holds) or weakened:
+
+1. H1: DG input at recall cuts the share of foils whose final state is a stored pattern by more than 0.10 against the EC-on control; expected below one half, with repeats still on their own pattern at least 95% of the time.
+2. H2: DG input at recall does not by itself produce people's false recognition; expected the null, every readout calling fewer than 25.3% of lures old.
+3. H3: final-state support's thresholds stop crossing.
+4. Starting-state familiarity is identical in every condition.
+5. E8c's model on E9's lists repeats E8c's values within 0.05.
+6. Without DG, more lures are called old under R2 and R3.
+7. Without CA3's recurrent synapses, the CA3 readouts call every item new (by construction).
+8. At 17.1 units, thinning the perforant path lowers R3's recognition at each step but leaves R1's and R2's within 0.10 of intact.
+9. Under older adults' criteria, no thinned perforant path at 17.1 units makes the older-adult error.
+
+### E9 results
+
+With DG driving CA3 at 17.1 units, final-state support calls about as many similar lures old as young adults do, more often the more similar the lure, and answers similar again. The protocol predicted that no readout would do this, and that prediction failed. The match covers old answers only: the model calls far fewer lures similar and far more new than people. At the 1.9-unit lower bound none of it happens. H1 and H3 were supported at 17.1 units, H2's expected null failed, predictions 8 and 9 failed, and 4 to 7 held. On the evaluation lists, 128 drawings, closer lures, each condition's young-adult thresholds, 10 seeds:
+
+| | LDI | REC | Old to lures | Similar to lures | New to lures | Old to foils |
+|---|---|---|---|---|---|---|
+| Young adults (Stark and colleagues 2013) | 0.360 | 0.786 | 40.3% | 47.6% | 8.3% | 2.6% |
+| DG 17.1, R2 (final-state support) | 0.072 | 0.741 | 38.1% | 18.8% | 43.1% | 5.9% |
+| DG 17.1, R1 (CA1 comparator) | 0.062 | 0.775 | 26.6% | 27.7% | 45.7% | 4.9% |
+| DG 17.1, R3 (starting-state familiarity) | 0.383 | 0.765 | 0% | 53.8% | 46.2% | 0% |
+| DG 1.9, R2 | 0.000 | 0.405 | 45.1% | 0% | 54.9% | 37.9% |
+| EC-on control, R2 | 0.000 | 0.394 | 43.8% | 0% | 56.2% | 38.8% |
+| DG 17.1, no DG, R2 | 0.000 | 0.000 | 100% | 0% | 0% | 100% |
+| Vision code alone | 0.752 | 0.804 | 0% | 93.1% | 6.9% | 0% |
+
+- **H1 supported.** At 17.1 units no foil ends on a stored pattern (0.000 against the control's 0.997, 10 of 10 seeds). No repeat does either: repeats on their own pattern 0.000, against the expected 0.95 or more.
+- **H2's expected null failed.** Under R2, 38.1% of closer lures are called old, falling from 64.7% at C1 to 18.7% at C5, with 5.9% of foils old; under R1, 26.6%, falling from 55.7% to 7.5%, with 4.9% of foils old. Both meet the alternative's criteria. On other-drawer lures the null held: R1 and R2 call 6.4% and 6.5% old, about the foil rate.
+- **H3 supported.** R2's θ_old (0.0322) sits above θ_new (0.0303); in the EC-on control and E8c's model they still cross.
+- **At 1.9 units H1 and H3 are falsified and H2 weakened.** 95.5% of foils still end on a stored pattern, R2's thresholds cross, and R2 calls 45.1% of closer lures and 37.9% of foils old.
+- **Predictions 4 to 7 held.** R3 and R3s are identical in every condition; E8c's model repeats E8c within 0.04 (R3 REC 0.765 against 0.760, LDI 0.383 against 0.415); without DG, R2 calls 100% of lures old and R3 99.8%; without recurrent synapses every item is new.
+- **Prediction 8 failed.** Thinning to 75%, 50% and 25% lowers R3's REC at each step (0.765, 0.607, 0.301, 0.009) and keeps R1's within 0.10 (0.775 to 0.715), but R2's falls 0.110 at 25% kept (0.741 to 0.631).
+- **Prediction 9 failed.** Under older adults' criteria R2's 75% arm calls 41.5% of lures and 9.9% of foils old, inside the protocol's rule for the older-adult error. Thinning further leaves lures near 42% to 43% while foils rise to 16.0%; adults 60 to 74 call 54.6% of lures and 4.8% of foils old, so thinning does not raise false recognition of lures as ageing does.
+
+These results also stood out:
+
+- **CA3's final state follows DG's response.** At 17.1 units more than four fifths of each final state's cells are those DG's response alone would pick, and no final state is exactly a stored pattern. Final-state support then reads how much of that state the stored synapses support: median 0.041 for repeats, 0.031 for closer lures and 0.028 for foils. That is the mechanism in this model, not a claim about the brain. About a quarter of items were still changing after 70 rounds.
+- **The result depends on the mossy strength.** The human-like pattern appears only at 17.1 units, and the protocol cautions that 17.1 may overstate the effective strength at recall: single mossy potentials rarely fire a CA3 cell, and trisynaptic volleys after entorhinal stimulation were weaker than the direct one (Henze, Wittner and Buzsáki 2002; Yeckel and Berger 1990, abstracts). No strength between 1.9 and 17.1 was run.
+- **The frozen DG record weakens the last drawings studied.** A repeat's DG response at test shares about 42% of its study pattern for the first 96 drawings and 5.5% for the last 16.
+
+The background run reproduced E8c's signals and thresholds exactly (largest difference 0.0) and left R3 and R3s identical in all four conditions. Every number is in `results/e9.md`. The background run took 89 minutes and the evaluation run 76, one after the other, each under 3.8 GB resident, and the evaluation lists were scored once.
+
 ## Install
 
 Clone this repo next to aha4, so that `../aha4/checkpoints/vc_pretrained.pth.tar` and `../aha4/data` exist. aha4's `evaluate.py` downloads the data on its first run.
@@ -636,6 +691,24 @@ python -m trisynapsnet.eval.starting run --split evaluation --pool e8b-unused --
 
 Each result file holds every test item's signal under all four readouts, so thresholds can be applied afterwards; `python scripts/make_e8c_table.py --calibrate` sets them from the background file and `python scripts/make_e8c_table.py` scores the evaluation file.
 
+## Run E9
+
+Every run recalls each list under all four conditions from one study and writes one result file per condition. A one-list check confirms the code runs and is never scored. The background run gives the thresholds and checks E8c's model against E8c's background signals and thresholds; the evaluation run refuses to start unless those checks passed, and is scored once:
+
+```
+PYTHON=.venv/bin/python scripts/run_e9.sh K          # one background list, never scored
+PYTHON=.venv/bin/python scripts/run_e9.sh A          # background, 128 drawings, every arm; then thresholds and checks
+PYTHON=.venv/bin/python scripts/run_e9.sh C          # evaluation lists, seeds 200 to 209, then results/e9.md
+```
+
+One condition on its own:
+
+```
+python -m trisynapsnet.eval.dgrecall run --split evaluation --first-seed 200 --load 128 --conditions dg17.1
+```
+
+Each result file holds every test item's signal under all four readouts, with the CA3 and DG logs, so thresholds can be applied afterwards; `python scripts/make_e9_table.py --calibrate` sets them from the background files and runs the checks, `python scripts/make_e9_table.py --check` prints the checks, and `python scripts/make_e9_table.py` scores the evaluation files.
+
 ## Layout
 
 ```
@@ -653,8 +726,9 @@ trisynapsnet/eval/perforant.py  E3: every arm, PR or perforant path, with and wi
 trisynapsnet/eval/behaviour.py  E8: similar-lure recognition, load, interference and virtual lesions
 trisynapsnet/eval/recognition.py  E8b: the recall-based readout, the network at human proportions and closer lures
 trisynapsnet/eval/starting.py   E8c: the starting-state readouts and the held-out evaluation lists
-scripts/                        E1 to E1d, E3, E4, E8, E8b and E8c drivers, table and figure builders
-docs/                           E1b's, E1c's, E1d's, E3's, E4's, E8's, E8b's and E8c's protocols, and E8's, E8b's and E8c's sources
+trisynapsnet/eval/dgrecall.py   E9: DG's response at test, mossy and EC input during attractor dynamics, four recall conditions
+scripts/                        E1 to E1d, E3, E4, E8, E8b, E8c and E9 drivers, table and figure builders
+docs/                           E1b's, E1c's, E1d's, E3's, E4's, E8's, E8b's, E8c's and E9's protocols, and E8's, E8b's, E8c's and E9's sources
 ```
 
 Code adapted from aha4 says so at the top of each file.

@@ -42,11 +42,11 @@ Lures are sorted into five **lure bins** by how similar they are to the studied 
 
 *Mnemonic Similarity Task: A Tool for Assessing Hippocampal Integrity.* Trends in Cognitive Sciences 23:938-951. doi 10.1016/j.tics.2019.08.003. PMID 31597601, PMC6991464.
 
-- Section "MST: Design and Measures": LDI is "the probability of giving a "Similar" response to the lure items minus the probability of giving" a "Similar" response to the foils, "to account for any bias the participant may have in using the "Similar" response overall". Box 2 defines "a traditional "corrected recognition memory" (REC) score" as hits minus false alarms.
-- Lure bins: "items in Lure Bin 1 are highly similar and elicit false alarms quite often" while "those in Lure Bin 5 are far more dissimilar and have very few false alarms."
+- Section "MST: Design and Measures": LDI is "the probability of giving a "Similar" response to the lure items minus the probability of giving" a "Similar" response to the foils, "to account for any bias the participant may have in using the "Similar" response overall". The same section's main text, after Box 2, defines "a traditional "corrected recognition memory" (REC) score" as hits minus false alarms.
+- Lure bins: "items in Lure Bin 1 are highly similar and elicit false alarms quite often" while "those in Lure Bin 5 are far more dissimilar and have very few false alarms".
 - Lesions: "lure discrimination performance is impaired in amnesic patients with damage limited to the hippocampus" while recognition is intact; "a rare patient with damage limited to the dentate gyrus showed selective impairments on discrimination of similar lures" (citing Baker and colleagues 2016); "Similar results have been reported for patients with CA1 specific lesions" (citing Hanert and colleagues 2019).
 - Ageing: "the integrity of the perforant path, connecting the EC to the hippocampus, deteriorates with age", and "aging leads to reduced input to the DG via the perforant path".
-- The review states no numbers per lure bin; Figure 2F plots them.
+- The review states no numbers per lure bin. Figure 2F plots 1 − p(old) per bin for older adults (unimpaired and impaired) and people with mild cognitive impairment, with no curve for young adults.
 
 **E8 uses**: the definitions, the direction of the lure-bin effect (more similar lures, more false alarms, lower discrimination), and the direction of each lesion finding.
 
@@ -66,7 +66,8 @@ Lures are sorted into five **lure bins** by how similar they are to the studied 
 Baker, Vieweg, Gao, Gilboa, Wolbers, Black and Rosenbaum. *The Human Dentate Gyrus Plays a Necessary Role in Discriminating New Memories.* Current Biology 26:2629-2634. doi 10.1016/j.cub.2016.07.081. PMID 27666968.
 
 - Summary (Europe PMC record): "Here, we report the rare case of BL, a 54-year-old man with bilateral ischemic lesions to the hippocampus [24] primarily affecting the dentate gyrus."
-- The full text is behind the publisher's paywall and was not readable here, so BL's response rates are not used. The finding E8 compares against is the one Stark and colleagues 2019 report: selective impairment on similar lures with normal recognition.
+- Results and Discussion (full text, Cell Press open archive), against 20 controls: BL was "similar to that of controls in correctly identifying targets (t(19) = -0.24, p = 0.82)" and foils (t(19) = -0.98, p = 0.34), "performed significantly worse than controls in identifying lures (t(19) = -2.50, p = 0.02)", and "BL's LDI score was close to zero" (t = -2.18; p = 0.04). His response rates appear only in Figure 1, so none is used.
+- Experimental Procedures: his lesions "are limited to the dentate gyrus and a portion of CA3".
 
 **E8 uses**: the direction only. Removing DG should lower LDI and leave REC near normal.
 
@@ -74,20 +75,20 @@ Baker, Vieweg, Gao, Gilboa, Wolbers, Black and Rosenbaum. *The Human Dentate Gyr
 
 Kirwan, Hartshorn, Stark, Goodrich-Hunsaker, Hopkins and Stark. *Pattern separation deficits following damage to the hippocampus.* Neuropsychologia 50:2408-2414. doi 10.1016/j.neuropsychologia.2012.06.011. PMID 22732491, PMC3411917.
 
-- Patients (Section 2.1, Table 1): three people with bilateral hippocampal damage after anoxia or brain injury, with hippocampal volume reduced by 33%, 44% and 42%; 11 age-matched controls.
+- Patients (Section 2.1; Table 1 gives their age, education and test scores): three people with bilateral hippocampal damage after anoxia or brain injury, with hippocampal volume reduced by 33%, 44% and 42%; 11 age-matched controls.
 - Baseline old/new test (Figure 2A, Section 3): corrected recognition 0.81 (SD 0.08) for patients, 0.87 (0.09) for controls, t(12) = 0.83, p = 0.42.
 - Old/similar/new test (Figure 2B, Section 3): pattern separation index 0.10 (0.07) for patients, 0.37 (0.15) for controls, t(12) = 3.18, p < 0.01.
 - Table 2, the same test, both stimulus types: old to repeats 0.62 (patients) and 0.77 (controls); old to lures 0.38 and 0.37; similar to lures 0.38 and 0.49; old to foils 0.22 and 0.21. From these, REC on this test is 0.40 for patients and 0.56 for controls.
-- Discussion: the patients did not call more lures old, as the authors had predicted; they called more lures new.
+- Results (Section 3): "contrary to our second prediction, patients did not respond "old" to similar stimuli more often than control participants" (corrected "old" scores did not differ), and patients gave more "new" responses to lures than controls (t(12) = 4.75, p < 0.001).
 
 **E8 uses**: patients' LDI 0.10 against controls' 0.37, recognition near normal on the old/new test, and p(old | lure) unchanged, as the comparison for removing the whole hippocampus.
 
 ### Yassa, Muftuler and Stark 2010
 
-*Ultrahigh-resolution microstructural diffusion tensor imaging reveals perforant path degradation in aged humans in vivo.* PNAS 107:12687-12691. doi 10.1073/pnas.1002113107. PMID 20616040.
+*Ultrahigh-resolution microstructural diffusion tensor imaging reveals perforant path degradation in aged humans in vivo.* PNAS 107:12687-12691. doi 10.1073/pnas.1002113107. PMID 20616040, PMC2906542.
 
 - Abstract: "We report direct evidence of age-related PP degradation in humans in vivo. We find no evidence of such loss in a control pathway, the alveus". "The extent of PP degradation correlated with performance on a word-list learning task sensitive to hippocampal deficits."
-- The full text was not readable here, so the size of the loss is not used.
+- Results (full text): the age difference in perforant-path integrity is reported as "a significant group difference in the area under the curve (AUC)" (t = 2.53, P = 0.01; Fig. 3A). No size of the loss in humans is stated, so none is used.
 
 ### Yassa, Mattfeld, Stark and Stark 2011
 
@@ -97,7 +98,7 @@ Kirwan, Hartshorn, Stark, Goodrich-Hunsaker, Hopkins and Stark. *Pattern separat
 - Figure 4C: "a positive relationship between perforant path integrity in older adults and their separation bias", r = 0.73, P < 0.05, n = 11.
 - Behavioural rates appear only in Figure S1.
 
-**E8 uses**: the direction. A thinner perforant path goes with worse lure discrimination in older adults. The model's thinning levels are not taken from any measured loss, since none was readable.
+**E8 uses**: the direction. A thinner perforant path goes with worse lure discrimination in older adults. The model's thinning levels are not taken from any measured loss, since no source states one in humans.
 
 ### Hanert, Pedersen and Bartsch 2019
 
@@ -110,5 +111,5 @@ Kirwan, Hartshorn, Stark, Goodrich-Hunsaker, Hopkins and Stark. *Pattern separat
 
 ## Not found
 
-- **LDI by lure bin for young adults.** None of the sources above states rates per bin in its text; Stark and colleagues 2019 (Figure 2F), Yassa and colleagues 2011 (Figure S1) and Lacy and colleagues 2011 (Learning & Memory 18:15-18, doi 10.1101/lm.1971111, Supplemental Figure 1B) show them only in figures. E8's figures therefore carry no human curve, and the comparison is the direction: discrimination rises from L1 to L5.
-- **Patient BL's rates** (Baker and colleagues 2016), **the size of perforant-path loss with age** (Yassa and colleagues 2010) and **rates in transient global amnesia** (Hanert and colleagues 2019): full texts not readable here.
+- **LDI by lure bin for young adults.** No source gives young adults' rates per bin as numbers. Stark and colleagues 2013 (Figure 3C) plot 1 − p(old) per bin for each healthy age group; Stark and colleagues 2019 (Figure 2F) plot 1 − p(old) per bin for older adults and people with mild cognitive impairment only; Yassa and colleagues 2011 (Figure S1) plot older adults' overall rates, with no bins; Lacy and colleagues 2011 (Learning & Memory 18:15-18, doi 10.1101/lm.1971111, Supplemental Figure 1B) plot 1 − p(old) for each lure pair, the ranking that defines the bins. E8's figures therefore carry no human curve, and the comparison is the direction: discrimination rises from L1 to L5.
+- **Patient BL's rates** appear only in Baker and colleagues' Figure 1. **The size of perforant-path loss with age** in humans is not stated by Yassa and colleagues 2010. **Rates in transient global amnesia** (Hanert and colleagues 2019): full text not readable here.

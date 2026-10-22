@@ -281,6 +281,22 @@ def dg_overlap_summary(record):
             v = torch.tensor(items["dg_paired_overlap"], dtype=torch.float64)[types == t]
             vals.append(v.mean().item() if len(v) else float("nan"))
         out[TYPE_NAMES[t]] = nanmean(vals)
+    # Repeats by study position (eighths of the list), where the frozen DG
+    # record (protocol item 1) inhibits the last drawings studied most.
+    load = record["args"]["load"]
+    step = max(1, load // 8)
+    for b in range(0, load, step):
+        vals = []
+        for s in sorted(record["per_seed"], key=int):
+            items = record["per_seed"][s]
+            if "dg_paired_overlap" not in items:
+                continue
+            types = torch.tensor(items["types"])
+            paired = torch.tensor(items["paired"])
+            m = (types == 0) & (paired >= b) & (paired < b + step)
+            v = torch.tensor(items["dg_paired_overlap"], dtype=torch.float64)[m]
+            vals.append(v.mean().item() if len(v) else float("nan"))
+        out["repeats studied {} to {}".format(b + 1, b + step)] = nanmean(vals)
     return out
 
 

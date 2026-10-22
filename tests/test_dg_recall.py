@@ -331,7 +331,13 @@ def test_table_script_scores_every_prediction():
     ca3 = {c: tb.ca3_summary(records[c]) for c in dr.CONDITIONS}
     assert ca3["dg17.1"]["foils on any stored pattern"]["mean"] == 0
     assert ca3["ec"]["repeats on their own pattern"]["mean"] == 1
-    text = tb.tables(cal, scores, ca3, tb.dg_overlap_summary(records["dg17.1"]), preds)
+    dg = tb.dg_overlap_summary(records["dg17.1"])
+    assert dg["repeats"] == pytest.approx(0.9)
+    # Repeats' DG overlap by study position, in eighths of the list.
+    by_position = [k for k in dg if k.startswith("repeats studied")]
+    assert len(by_position) == 8
+    assert all(dg[k] == pytest.approx(0.9) for k in by_position)
+    text = tb.tables(cal, scores, ca3, dg, preds)
     assert text.startswith("## Tables") and "older adults' criteria" in text
 
 

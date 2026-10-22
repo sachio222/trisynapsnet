@@ -339,6 +339,57 @@ These results also stood out:
 
 The model's old answer covers only exact repeats: to be called old, a lure would need a cosine above 0.968 with its studied drawing in the vision code. Every number is in `results/e8.md`, and the figures are `figures/e8_ldi_by_bin.pdf` and `figures/e8_load.pdf`. All E8 runs, background and evaluation, took 82 minutes of process time, at most two at once.
 
+## E8b: why the model never calls a look-alike old
+
+In people, the usual account of calling a similar lure old is pattern completion: the hippocampus rebuilds the stored memory of the studied picture from the lure, so the picture comes back to mind and the lure feels familiar. E8's model never called a lure old, and E8 left three suspects. The readout: CA1 as a comparator catches any difference between the drawing CA3 brings back and the drawing in front of the model. The size: CA3 had 225 cells, and recognition collapsed past 50 drawings, while people study 128 pictures. The lures: another person's drawing is far less similar to the studied one than the human task's lures are. E8b changes all three, each for a reason in the biology, and leaves every learning rule as it was.
+
+1. **A readout from CA3 (R2)**, beside E8's CA1 comparator (R1). At test the perforant path picks a cue of 68 CA3 cells, and CA3 runs in rounds: in each round the cells with the most recurrent input from the cells now active fire next, until the state stops changing. A state that holds itself this way is an attractor, and each stored pattern is one; reaching the studied drawing's pattern from a partial or distorted cue is pattern completion. R2 is the share of the potentiated recurrent input onto the final state's active cells that comes from other active cells, high for a stored pattern and lower for a mixture. It uses only quantities a cell has and never reads the list of stored patterns.
+2. **Human proportions.** DG, CA3 and CA1 keep the ratios of the human cell counts (15 million, 1.7 million and 16 million), scaled down 500 times, the largest size under the memory limit: 30,000, 3,400 and 32,000 cells, with 2% of DG and CA3 cells active and 280 DG inputs to each CA3 cell, the human figure. EC stays at the vision code's 20,449 units.
+3. **The human list and closer lures.** The model studies 128 drawings, the length of the human task's list, and is tested on 64 repeats, 64 foils, E8's other-drawer lures and a second set: the studied drawing itself, distorted at five levels from C1 (median vision-code cosine 0.966 with the undistorted drawing) to C5 (0.697).
+
+Each readout's two thresholds are set on background alphabets to young adults' rates, 81.2% of repeats old and 82.0% of foils new. E8's lesions, loads from 20 to 256 drawings, and 2 or 4 drawings per character run again under both readouts. Every choice is in `docs/e8b_protocol.md`, and the human task's list and lures, with sources, in `docs/e8b_sources.md`.
+
+The predictions, written before the runs (exact wording in the protocol):
+
+1. Under R2, p(old | lure) roughly equals the share of lures that end on their studied pattern, rises with lure similarity, and comes within 0.15 of young adults' 0.403 on closer lures.
+2. Under R2, LDI falls as lures grow more similar, the human direction; under R1 it keeps rising, as in E8.
+3. REC at 128 drawings is at least 0.6 under both readouts.
+4. Removing CA3's recurrent connections drops p(old | lure) under R2 by at least half; removing DG raises it.
+5. Thinning the perforant path lowers p(old | lure) under R2.
+6. With four drawings per character, the intact model's LDI beats the vision-code baseline under at least one readout.
+
+### E8b results
+
+At the human list length, with lures as close as the human task's, neither readout answers like people, and one prediction of six held. On the evaluation alphabets, 128 drawings, closer lures, 10 seeds:
+
+| | LDI | REC | Old to lures | Old to foils |
+|---|---|---|---|---|
+| Young adults (Stark and colleagues 2013) | 0.360 | 0.786 | 40.3% | 2.6% |
+| Intact model, R1 (CA1 comparator) | 0.006 | 0.724 | 2.4% | 0% |
+| Intact model, R2 (CA3 self-support) | 0.000 | 0.432 | 39.6% | 35.5% |
+| No CA3 recurrent connections, R1 | 0.102 | 0.700 | 0% | 0% |
+| No DG, R1 | 0.103 | 0.351 | 0% | 0% |
+| Perforant path, 25% kept, R1 | 0.042 | 0.676 | 1.6% | 0% |
+| Perforant path, 25% kept, R2 | 0.000 | 0.403 | 35.4% | 31.4% |
+| Vision code alone | 0.768 | 0.804 | 0% | 0% |
+
+- **Prediction 1 failed.** R2 calls 39.6% of closer lures old, within 0.15 of people, and fewer as lures grow less similar (46.1% at C1, 36.1% at C5). But only 18.0% of closer lures end on their studied pattern, and R2's closeness to people comes from its thresholds: on background runs the foil target puts θ_new (0.2761) above the repeat target's θ_old (0.2662), so R2 never answers similar and calls 35.5% of foils old. The protocol said a crossing would be reported but not how answers should then be assigned; nothing was changed after it was seen.
+- **Prediction 2 failed.** R2's LDI is 0 at every level. R1's half held: LDI 0.062 at C1 against −0.086 at C5.
+- **Prediction 3 failed.** REC is 0.724 under R1 and 0.432 under R2.
+- **Prediction 4 failed.** Without recurrent connections R2 has no signal, so no lure is called old. Without DG no lure is called old either, where the prediction said more: no lure or foil ends on a stored pattern, and R2 calls almost every item new.
+- **Prediction 5 held.** p(old | lure) under R2 falls from 0.396 to 0.393, 0.380 and 0.354 with 75%, 50% and 25% of connections kept (lower in 5, 8 and 8 of 10 seeds), as fewer lures end on their studied pattern (18.0% intact, 11.9% at 25% kept). Old answers to foils fall too. Older adults call more lures old, not fewer, so this runs against the ageing pattern, as the prediction said it would.
+- **Prediction 6 failed.** With four drawings per character, LDI on other-drawer lures is 0.326 under R1 and 0 under R2, against 0.494 for the vision code.
+
+These results also stood out:
+
+- **Attractor dynamics carry every cue onto a stored pattern.** Every repeat, lure and foil ends on one (nearest-pattern overlap 1.000, logged only, since it needs the list of stored patterns). For 82% of closer lures it is another studied drawing's pattern, so CA1 returns a different character's drawing and R1 calls 74.3% of closer lures new. A final state that is a stored pattern supports itself about equally whichever memory it is, so R2's median signal is 0.278 for repeats and 0.261 for foils.
+- **The starting state separates repeats from everything else.** Self-support of the cue, before attractor dynamics, is 0.233 for repeats and about 0.05 for lures and foils. It was logged, not used as a readout; testing it as one needs a new experiment with its own protocol and a test set it has not seen.
+- **Recognition now holds at the human list length.** With the 128-drawing thresholds, R1's REC is 0.995 at 50 drawings, 0.890 at 100 and 0.724 at 128, where E8's network had 0.062 at 50; it falls to 0.182 at 200 and 0.031 at 256. With thresholds set again at each load it stays between 0.718 and 0.782.
+- **The vision code alone beats people on closer lures** (LDI 0.768 against 0.360). Its old threshold is an exact repeat, and every closer level's median cosine lies above its new threshold (0.6253), so it calls 93.9% of closer lures similar.
+- **Without DG, recognition halves** (REC 0.351): repeats end on their own pattern 53.0% of the time, and half of them are called similar.
+
+On other-drawer lures R1 scores LDI 0.121, highest for the most similar bin as in E8, and calls no lure old. The first launch of the main evaluation run stopped seven seconds in, before any seed ran, when a second job unpacked the evaluation alphabets into the same folder; it was relaunched unchanged and completed, and each condition was scored once. Every number is in `results/e8b.md`, and the figures are `figures/e8b_ldi_by_level.pdf`, `figures/e8b_old_by_level.pdf` and `figures/e8b_load.pdf`. All E8b runs took 9.0 hours summed over runs, at most two at once.
+
 ## Install
 
 Clone this repo next to aha4, so that `../aha4/checkpoints/vc_pretrained.pth.tar` and `../aha4/data` exist. aha4's `evaluate.py` downloads the data on its first run.
@@ -490,6 +541,28 @@ PYTHON=.venv/bin/python JOBS=2 scripts/run_e8.sh B   # then C and D
 python scripts/make_e8_table.py
 ```
 
+## Run E8b
+
+Three steps on background alphabets set everything before the evaluation runs: a memory probe picks the network size (it records only memory and time), the closer-lure levels come from background drawings, and the thresholds come from the background runs:
+
+```
+python -m trisynapsnet.eval.recognition probe
+PYTHON=.venv/bin/python scripts/run_e8b.sh L          # closer-lure levels
+PYTHON=.venv/bin/python scripts/run_e8b.sh A          # 128 drawings, every arm
+PYTHON=.venv/bin/python JOBS=2 scripts/run_e8b.sh B   # loads and interference
+python scripts/make_e8b_table.py --calibrate
+PYTHON=.venv/bin/python scripts/run_e8b.sh C          # then D
+python scripts/make_e8b_table.py
+```
+
+One condition on its own:
+
+```
+python -m trisynapsnet.eval.recognition run --split evaluation --load 128 --seeds 10
+```
+
+Each result file holds every test item's signal under both readouts, so thresholds can be applied afterwards. A run writes its file after every seed and picks up after the last finished seed.
+
 ## Layout
 
 ```
@@ -505,8 +578,9 @@ trisynapsnet/eval/sparsecodes.py  E1d: E1c's CA3 test at sparser codes and large
 trisynapsnet/eval/ca1space.py   E4: CA1 on its own, returning EC codes against load
 trisynapsnet/eval/perforant.py  E3: every arm, PR or perforant path, with and without settling
 trisynapsnet/eval/behaviour.py  E8: similar-lure recognition, load, interference and virtual lesions
-scripts/                        E1 to E1d, E3, E4 and E8 drivers, table and figure builders
-docs/                           E1b's, E1c's, E1d's, E3's, E4's and E8's protocols, and E8's sources
+trisynapsnet/eval/recognition.py  E8b: the recall-based readout, the network at human proportions and closer lures
+scripts/                        E1 to E1d, E3, E4, E8 and E8b drivers, table and figure builders
+docs/                           E1b's, E1c's, E1d's, E3's, E4's, E8's and E8b's protocols, and E8's and E8b's sources
 ```
 
 Code adapted from aha4 says so at the top of each file.

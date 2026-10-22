@@ -390,6 +390,60 @@ These results also stood out:
 
 On other-drawer lures R1 scores LDI 0.121, highest for the most similar bin as in E8, and calls no lure old. The first launch of the main evaluation run stopped seven seconds in, before any seed ran, when a second job unpacked the evaluation alphabets into the same folder; it was relaunched unchanged and completed, and each condition was scored once. Every number is in `results/e8b.md`, and the figures are `figures/e8b_ldi_by_level.pdf`, `figures/e8b_old_by_level.pdf` and `figures/e8b_load.pdf`. All E8b runs took 9.0 hours summed over runs, at most two at once.
 
+## E8c: a familiarity signal from CA3's starting state
+
+E8b found one quantity that told repeats from lures and foils: the support that CA3's starting state, before any attractor step, gets from its own recurrent synapses (median 0.233 for repeats, about 0.05 for lures and foils). It was logged, never used to decide. Models of familiarity read a signal of this kind, the energy of the presented pattern in a recurrent network, before any retrieval step (Bogacz, Brown and Giraud-Carrier 2001; Cortes and colleagues 2010, who show it stops telling old from new once the network reaches an attractor). E8c asks whether such a signal, read from CA3, makes people's recognition errors. It changes the readout and nothing in the circuit.
+
+1. **A starting-state readout (R3).** When a test drawing arrives, the perforant path drives CA3 and the 68 most driven cells fire: the starting state. R3 is the share of the starting state's cell pairs whose recurrent synapse is potentiated, the state's energy with the sign reversed, divided by a constant. It is computed before any attractor step, never reads the list of stored patterns, and has no free setting. Beside it, R3s applies E8b's self-support formula to the starting state, the quantity E8b logged; R1 and R2 are kept as in E8b.
+2. **R3 is a stand-in.** The familiarity models that support this calculation place it in perirhinal cortex, and the sources read place the hippocampus's own novelty signal in CA1, after recall. The model has no perirhinal cortex and CA3 is its only recurrent network, so R3 applies the calculation to CA3; no source read identifies a population that reads CA3's first recurrent pass.
+3. **A held-out test set.** The idea came from E8b's evaluation results, so E8c is scored on the 2,704 evaluation drawings E8b's 128-drawing lists never used (619 characters have two of them), with new seeds (100 to 109), lists, wiring and distortions. The drawings share E8b's 20 alphabets and 20 drawers, and each appeared in some other E8b condition, so this is a new sample of the same population.
+4. **Criteria.** Two thresholds per readout, set on background alphabets to young adults' rates (81.2% of repeats old, 82.0% of foils new). For an ageing test, the intact model and the thinned perforant paths are also scored with adults 60 to 74's rates (82.2% and 73.4%). Background lists are rebuilt exactly as E8b's, so R1 and R2 there must equal E8b's signals.
+
+Every arm of E8b runs at 128 drawings with both lure sets. Every choice is in `docs/e8c_protocol.md`, and the sources, with quotes and locations, in `docs/e8c_sources.md`.
+
+The predictions, written before the runs (exact wording in the protocol):
+
+1. R3's thresholds leave room for similar at young adults' rates.
+2. R3's p(old | lure) rises with lure similarity (2a), but its LDI does not rise toward less similar lures as people's does (2b).
+3. p(old | lure) falls more than 0.15 below young adults' 0.403, and p(new | lure) is above 0.30.
+4. REC is within 0.10 of young adults' 0.786.
+5. Without CA3's recurrent connections every item is new (by construction); without DG p(old | lure) rises and LDI falls; thinning the perforant path lowers p(old | lure) and REC at each step.
+6. Under older adults' criteria, each thinned perforant path calls more lures old than the intact model under the same criteria.
+7. R1 and R2 on the held-out drawings repeat E8b's evaluation values within 0.05.
+
+### E8c results
+
+R3 recognises studied drawings nearly as well as young adults and answers similar, but it never calls a lure old, so it does not make people's error. Prediction 2a failed, prediction 6 held for two of three thinned paths, and the rest held. On the held-out evaluation lists, 128 drawings, closer lures, young adults' thresholds, 10 seeds:
+
+| | LDI | REC | Old to lures | Similar to lures | New to lures | Old to foils |
+|---|---|---|---|---|---|---|
+| Young adults (Stark and colleagues 2013) | 0.360 | 0.786 | 40.3% | 47.6% | 8.3% | 2.6% |
+| Intact model, R3 | 0.415 | 0.760 | 0% | 56.0% | 44.0% | 0% |
+| Intact model, R3s | 0.233 | 0.762 | 0% | 40.4% | 59.6% | 0% |
+| Intact model, R1 (CA1 comparator) | −0.007 | 0.728 | 2.3% | 22.1% | 75.6% | 0% |
+| Intact model, R2 (CA3 final-state self-support) | 0.000 | 0.449 | 38.4% | 0% | 61.6% | 34.9% |
+| No DG, R3 | −0.145 | −0.198 | 99.9% | 0.1% | 0% | 85.3% |
+| Perforant path, 75% kept, R3 | 0.265 | 0.595 | 0% | 30.1% | 69.9% | 0% |
+| Perforant path, 50% kept, R3 | 0.065 | 0.289 | 0% | 6.8% | 93.2% | 0% |
+| Perforant path, 25% kept, R3 | 0.001 | 0.007 | 0% | 0.1% | 99.9% | 0% |
+| Vision code alone | 0.749 | 0.811 | 0% | 93.6% | 6.4% | 0% |
+
+- **Prediction 1 held.** R3's old threshold (0.8003) sits above its new threshold (0.2946), so it can answer similar; R2's thresholds cross again, as in E8b.
+- **Prediction 2a failed; 2b held.** R3 calls no closer lure old at any level, C1 to C5. Its LDI falls as lures grow less similar, from 0.498 at C1 to 0.352 at C5, the reverse of people's curve: it answers similar more often to closer lures, but false old answers that rise with similarity, the human error, are absent. On other-drawer lures it calls no lure old and its LDI is flat, 0.030 to 0.066 across bins (overall 0.045, with 81.0% of lures called new).
+- **Predictions 3 and 3b held.** p(old | lure) is 0.000 against 0.403, and p(new | lure) 0.440 against 0.083.
+- **Prediction 4 held.** REC 0.760.
+- **Predictions 5a, 5b and 5c held.** Without recurrent connections every item is new. Without DG, R3 calls 99.9% of closer lures, 84.4% of other-drawer lures and 85.3% of foils old: the stored patterns overlap, so every starting state looks familiar. Thinning lowers REC to 0.595, 0.289 and 0.007; p(old | lure) stays at 0 throughout, so that half holds only because no arm calls a lure old.
+- **Prediction 6 held at 50% and 25% kept, failed at 75%.** Under older adults' criteria the intact model and the 75% arm call no lure old, the 50% arm calls 1.6%, and the 25% arm 99.3%, at every level from C1 to C5 (0.992 to 0.994), with thresholds that cross so it never answers similar, and with 62.0% of foils old. Adults 60 to 74 call 54.6% of lures and 4.8% of foils old, so neither arm shows the older-adult pattern.
+- **Prediction 7 held.** R1's REC 0.728, closer-lure LDI −0.007 and p(old | lure) 0.023, and R2's p(old | lure) 0.384 and REC 0.449, all within 0.02 of E8b's.
+
+These results also stood out:
+
+- **The starting-state signal holds on new drawings.** R3s's median is 0.234 for repeats, 0.052 for closer lures and 0.049 for foils, against E8b's 0.233, 0.052 and 0.049. R3's median is 0.959 for repeats, 0.298 for closer lures and 0.267 for foils, far below the old threshold for lures.
+- **People's rate lies between two arms.** Young adults call 40.3% of lures old; the intact model calls none and the model without DG nearly all. That is an observation from the arms, not a fitted result.
+- **The vision code alone never calls a lure old either.** R3 does not apply to it: it decides from vision-code cosines with its own thresholds, and its old threshold is an exact repeat. It discriminates closer lures better than R3 and better than people (LDI 0.749).
+
+The background run, with seeds 0 to 9, reproduced E8b's R1 and R2 signals exactly (largest difference 0.0). Every number is in `results/e8c.md`. The background and evaluation runs took about 46 minutes each, one after the other, each under 3.7 GB resident, and the evaluation lists were scored once.
+
 ## Install
 
 Clone this repo next to aha4, so that `../aha4/checkpoints/vc_pretrained.pth.tar` and `../aha4/data` exist. aha4's `evaluate.py` downloads the data on its first run.
@@ -563,6 +617,25 @@ python -m trisynapsnet.eval.recognition run --split evaluation --load 128 --seed
 
 Each result file holds every test item's signal under both readouts, so thresholds can be applied afterwards. A run writes its file after every seed and picks up after the last finished seed.
 
+## Run E8c
+
+The held-out pool is rebuilt from E8b's list generators, with no model run. A one-list check confirms the code runs and is never scored. The background run gives the thresholds and checks R1 and R2 against E8b's background file; the evaluation run uses only held-out drawings and is scored once:
+
+```
+python -m trisynapsnet.eval.starting pool
+PYTHON=.venv/bin/python scripts/run_e8c.sh K          # one background list, never scored
+PYTHON=.venv/bin/python scripts/run_e8c.sh A          # background, 128 drawings, every arm; then thresholds
+PYTHON=.venv/bin/python scripts/run_e8c.sh C          # held-out evaluation lists, then results/e8c.md
+```
+
+One condition on its own:
+
+```
+python -m trisynapsnet.eval.starting run --split evaluation --pool e8b-unused --first-seed 100 --load 128
+```
+
+Each result file holds every test item's signal under all four readouts, so thresholds can be applied afterwards; `python scripts/make_e8c_table.py --calibrate` sets them from the background file and `python scripts/make_e8c_table.py` scores the evaluation file.
+
 ## Layout
 
 ```
@@ -579,8 +652,9 @@ trisynapsnet/eval/ca1space.py   E4: CA1 on its own, returning EC codes against l
 trisynapsnet/eval/perforant.py  E3: every arm, PR or perforant path, with and without settling
 trisynapsnet/eval/behaviour.py  E8: similar-lure recognition, load, interference and virtual lesions
 trisynapsnet/eval/recognition.py  E8b: the recall-based readout, the network at human proportions and closer lures
-scripts/                        E1 to E1d, E3, E4, E8 and E8b drivers, table and figure builders
-docs/                           E1b's, E1c's, E1d's, E3's, E4's, E8's and E8b's protocols, and E8's and E8b's sources
+trisynapsnet/eval/starting.py   E8c: the starting-state readouts and the held-out evaluation lists
+scripts/                        E1 to E1d, E3, E4, E8, E8b and E8c drivers, table and figure builders
+docs/                           E1b's, E1c's, E1d's, E3's, E4's, E8's, E8b's and E8c's protocols, and E8's, E8b's and E8c's sources
 ```
 
 Code adapted from aha4 says so at the top of each file.

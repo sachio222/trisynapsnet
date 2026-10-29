@@ -416,6 +416,13 @@ PYTHON=.venv/bin/python scripts/run_e3.sh status
 python scripts/make_e3_table.py
 ```
 
+Two example figures rerun the reported model on the evaluation drawings. `fig_tasks` shows Lake's first run, the first instance run and one test copy at every corruption level. `fig_recall` recalls all 400 instance-task copies at occlusion 0.5, sorts them by whether CA1 matched the right drawing with and without attractor dynamics, and traces one copy drawn at random from each outcome through CA3 and CA1. Both are written to `figures/e3_examples/`:
+
+```
+python scripts/make_e3_examples.py
+cd figures/e3_examples && tectonic fig_tasks.tex && tectonic fig_recall.tex
+```
+
 ## Layout
 
 ```

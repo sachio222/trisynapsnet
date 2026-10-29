@@ -1,0 +1,31 @@
+\documentclass[border=4pt]{standalone}
+\usepackage[T1]{fontenc}
+\usepackage{tgtermes}
+\usepackage{graphicx}
+\usepackage{array}
+\usepackage{xcolor}
+\definecolor{right}{RGB}{31,78,158}
+\definecolor{missing}{RGB}{170,199,238}
+\definecolor{stray}{RGB}{224,123,0}
+\setlength{\tabcolsep}{1.6pt}
+\renewcommand{\arraystretch}{1.0}
+\begin{document}
+\begin{minipage}{7in}
+\footnotesize
+
+\begin{tabular}{@{}rcccccccc@{}}
+ & & & \multicolumn{3}{c}{Cue passed straight through} & \multicolumn{3}{c}{After attractor dynamics}\\
+ & \parbox[b]{0.66in}{\centering Studied\\drawing} & \parbox[b]{0.66in}{\centering Test copy,\\occlusion 0.5} & \parbox[b]{0.66in}{\centering CA3 state\\(the cue)} & \parbox[b]{0.66in}{\centering CA1's\\match} & \parbox[b]{0.66in}{\centering AHA's CA1\\redraws} & \parbox[b]{0.66in}{\centering CA3 state} & \parbox[b]{0.66in}{\centering CA1's\\match} & \parbox[b]{0.66in}{\centering AHA's CA1\\redraws} \\[2pt]
+\parbox[c]{1.05in}{\raggedleft Both right\\(155 of 400)} & \parbox[c]{0.62in}{\includegraphics[width=0.62in]{tiles/ex0_studied.png}} & \parbox[c]{0.62in}{\includegraphics[width=0.62in]{tiles/ex0_copy.png}} & \parbox[c]{0.62in}{\includegraphics[width=0.62in]{tiles/ex0_ca3_none.png}} & \parbox[c]{0.62in}{\includegraphics[width=0.62in]{tiles/ex0_ca1_none.png}} & \parbox[c]{0.62in}{\includegraphics[width=0.62in]{tiles/ex0_pm_none.png}} & \parbox[c]{0.62in}{\includegraphics[width=0.62in]{tiles/ex0_ca3_settled.png}} & \parbox[c]{0.62in}{\includegraphics[width=0.62in]{tiles/ex0_ca1_settled.png}} & \parbox[c]{0.62in}{\includegraphics[width=0.62in]{tiles/ex0_pm_settled.png}} \\
+ &  &  &  & \textcolor{right}{right} &  &  & \textcolor{right}{right} &  \\[3pt]
+\parbox[c]{1.05in}{\raggedleft Fixed by attractor dynamics\\(103 of 400)} & \parbox[c]{0.62in}{\includegraphics[width=0.62in]{tiles/ex1_studied.png}} & \parbox[c]{0.62in}{\includegraphics[width=0.62in]{tiles/ex1_copy.png}} & \parbox[c]{0.62in}{\includegraphics[width=0.62in]{tiles/ex1_ca3_none.png}} & \parbox[c]{0.62in}{\includegraphics[width=0.62in]{tiles/ex1_ca1_none.png}} & \parbox[c]{0.62in}{\includegraphics[width=0.62in]{tiles/ex1_pm_none.png}} & \parbox[c]{0.62in}{\includegraphics[width=0.62in]{tiles/ex1_ca3_settled.png}} & \parbox[c]{0.62in}{\includegraphics[width=0.62in]{tiles/ex1_ca1_settled.png}} & \parbox[c]{0.62in}{\includegraphics[width=0.62in]{tiles/ex1_pm_settled.png}} \\
+ &  &  &  & \textcolor{stray}{wrong} &  &  & \textcolor{right}{right} &  \\[3pt]
+\parbox[c]{1.05in}{\raggedleft Broken by attractor dynamics\\(12 of 400)} & \parbox[c]{0.62in}{\includegraphics[width=0.62in]{tiles/ex2_studied.png}} & \parbox[c]{0.62in}{\includegraphics[width=0.62in]{tiles/ex2_copy.png}} & \parbox[c]{0.62in}{\includegraphics[width=0.62in]{tiles/ex2_ca3_none.png}} & \parbox[c]{0.62in}{\includegraphics[width=0.62in]{tiles/ex2_ca1_none.png}} & \parbox[c]{0.62in}{\includegraphics[width=0.62in]{tiles/ex2_pm_none.png}} & \parbox[c]{0.62in}{\includegraphics[width=0.62in]{tiles/ex2_ca3_settled.png}} & \parbox[c]{0.62in}{\includegraphics[width=0.62in]{tiles/ex2_ca1_settled.png}} & \parbox[c]{0.62in}{\includegraphics[width=0.62in]{tiles/ex2_pm_settled.png}} \\
+ &  &  &  & \textcolor{right}{right} &  &  & \textcolor{stray}{wrong} &  \\[3pt]
+\parbox[c]{1.05in}{\raggedleft Both wrong\\(130 of 400)} & \parbox[c]{0.62in}{\includegraphics[width=0.62in]{tiles/ex3_studied.png}} & \parbox[c]{0.62in}{\includegraphics[width=0.62in]{tiles/ex3_copy.png}} & \parbox[c]{0.62in}{\includegraphics[width=0.62in]{tiles/ex3_ca3_none.png}} & \parbox[c]{0.62in}{\includegraphics[width=0.62in]{tiles/ex3_ca1_none.png}} & \parbox[c]{0.62in}{\includegraphics[width=0.62in]{tiles/ex3_pm_none.png}} & \parbox[c]{0.62in}{\includegraphics[width=0.62in]{tiles/ex3_ca3_settled.png}} & \parbox[c]{0.62in}{\includegraphics[width=0.62in]{tiles/ex3_ca1_settled.png}} & \parbox[c]{0.62in}{\includegraphics[width=0.62in]{tiles/ex3_pm_settled.png}} \\
+ &  &  &  & \textcolor{stray}{wrong} &  &  & \textcolor{stray}{wrong} &  \\[3pt]
+\end{tabular}
+\par\smallskip
+CA3 cells:\enspace \textcolor{right}{\rule{6pt}{6pt}} right cell on\quad \textcolor{missing}{\rule{6pt}{6pt}} right cell off\quad \textcolor{stray}{\rule{6pt}{6pt}} stray cell on
+\end{minipage}
+\end{document}

@@ -1,0 +1,151 @@
+{
+ "seed": 0,
+ "level": 0.5,
+ "instance_run_1": {
+  "split": "evaluation",
+  "alphabet": "Mongolian",
+  "character": "character01",
+  "drawers": [
+   20,
+   5,
+   10,
+   4,
+   3,
+   15,
+   14,
+   11,
+   6,
+   8,
+   9,
+   2,
+   12,
+   17,
+   16,
+   19,
+   18,
+   13,
+   7,
+   1
+  ]
+ },
+ "settings": {
+  "willshaw": {
+   "presynaptic": "positive",
+   "normalise": true,
+   "emax": 0.3,
+   "share": 0.034722222222222224
+  },
+  "covariance": {
+   "presynaptic": "positive",
+   "normalise": true,
+   "emax": null,
+   "share": 0.034722222222222224
+  }
+ },
+ "device": "mps",
+ "counts": {
+  "both right": 155,
+  "fixed by attractor dynamics": 103,
+  "broken by attractor dynamics": 12,
+  "both wrong": 130
+ },
+ "copies": 400,
+ "examples": [
+  {
+   "outcome": "both right",
+   "run": 13,
+   "copy": 15,
+   "label": 0,
+   "none": {
+    "matched": 0,
+    "right": true,
+    "cells": {
+     "right_on": 3,
+     "missing": 2,
+     "stray": 2
+    }
+   },
+   "settled": {
+    "matched": 0,
+    "right": true,
+    "cells": {
+     "right_on": 5,
+     "missing": 0,
+     "stray": 0
+    }
+   }
+  },
+  {
+   "outcome": "fixed by attractor dynamics",
+   "run": 20,
+   "copy": 11,
+   "label": 18,
+   "none": {
+    "matched": 2,
+    "right": false,
+    "cells": {
+     "right_on": 2,
+     "missing": 3,
+     "stray": 3
+    }
+   },
+   "settled": {
+    "matched": 18,
+    "right": true,
+    "cells": {
+     "right_on": 5,
+     "missing": 0,
+     "stray": 0
+    }
+   }
+  },
+  {
+   "outcome": "broken by attractor dynamics",
+   "run": 15,
+   "copy": 13,
+   "label": 17,
+   "none": {
+    "matched": 17,
+    "right": true,
+    "cells": {
+     "right_on": 2,
+     "missing": 3,
+     "stray": 3
+    }
+   },
+   "settled": {
+    "matched": 18,
+    "right": false,
+    "cells": {
+     "right_on": 0,
+     "missing": 5,
+     "stray": 5
+    }
+   }
+  },
+  {
+   "outcome": "both wrong",
+   "run": 2,
+   "copy": 20,
+   "label": 14,
+   "none": {
+    "matched": 15,
+    "right": false,
+    "cells": {
+     "right_on": 1,
+     "missing": 4,
+     "stray": 4
+    }
+   },
+   "settled": {
+    "matched": 1,
+    "right": false,
+    "cells": {
+     "right_on": 0,
+     "missing": 5,
+     "stray": 5
+    }
+   }
+  }
+ ]
+}
